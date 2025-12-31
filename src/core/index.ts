@@ -63,3 +63,21 @@ export {
   resetPermissionManager,
 } from './PermissionManager';
 export type { Permission, PermissionContext } from './PermissionManager';
+
+// Diagnostic Collector
+export {
+  DiagnosticCollector,
+  getDiagnosticCollector,
+  resetDiagnosticCollector,
+} from './DiagnosticCollector';
+export type {
+  DiagnosticData,
+  DiagnosticCollectorConfig,
+  EnvironmentInfo,
+  PerformanceInfo,
+  ConsoleEntry,
+  JSError,
+  UserAction,
+  PageVisit,
+  RecordingSession,
+} from './DiagnosticCollector';

@@ -80,6 +80,9 @@ export interface TrakletConfig {
 
   /** Custom container element (default: document.body) */
   readonly container?: HTMLElement | undefined;
+
+  /** Collect diagnostic info (console logs, errors, environment) - default: true */
+  readonly collectDiagnostics?: boolean | undefined;
 }
 
 // Zod schemas for validation

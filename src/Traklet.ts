@@ -14,8 +14,10 @@ import {
   resetEventBus,
   resetAuthManager,
   resetPermissionManager,
+  DiagnosticCollector,
+  getDiagnosticCollector,
 } from './core';
-import type { TrakletConfig } from './core';
+import type { TrakletConfig, DiagnosticData, RecordingSession } from './core';
 import { LocalStorageAdapter } from './adapters';
 import { IssueListPresenter, IssueDetailPresenter, IssueFormPresenter } from './presenters';
 import type { IWidgetPresenter } from './presenters';
@@ -56,6 +58,47 @@ export interface TrakletInstance {
 
   /** Check if widget is open */
   isOpen(): boolean;
+
+  /** Get diagnostic collector for attaching info to issues */
+  getDiagnostics(): DiagnosticCollector;
+
+  /** Get formatted diagnostics as markdown */
+  getDiagnosticsMarkdown(): string;
+
+  /** Get raw diagnostic data */
+  getDiagnosticData(): DiagnosticData;
+
+  // ============================================
+  // Recording Session Methods (for multi-page bug reports)
+  // ============================================
+
+  /**
+   * Start recording a bug report session.
+   * User can navigate through multiple pages while recording.
+   * Data persists across page navigations via sessionStorage.
+   */
+  startRecording(): RecordingSession;
+
+  /**
+   * Stop the recording session and prepare for submission.
+   * Returns the complete session with all pages, actions, and errors.
+   */
+  stopRecording(): RecordingSession | null;
+
+  /**
+   * Cancel the current recording without saving
+   */
+  cancelRecording(): void;
+
+  /**
+   * Check if a recording session is currently active
+   */
+  isRecording(): boolean;
+
+  /**
+   * Get the current recording session (if any)
+   */
+  getRecordingSession(): RecordingSession | null;
 }
 
 /**
@@ -105,6 +148,15 @@ export class Traklet {
 
     // Emit connection event
     getEventBus().emit('connection:connected', { projects });
+
+    // Initialize diagnostic collector (auto-captures console/errors)
+    const diagnosticCollector = getDiagnosticCollector({
+      maxConsoleLogs: 50,
+      maxJsErrors: 20,
+      captureConsole: config.collectDiagnostics !== false,
+      captureErrors: config.collectDiagnostics !== false,
+    });
+    diagnosticCollector.init();
 
     // Create presenters
     const currentProjectId = projects[0]?.id ?? '';
@@ -187,6 +239,39 @@ export class Traklet {
       isOpen() {
         return stateManager.getState().isWidgetOpen;
       },
+
+      getDiagnostics() {
+        return diagnosticCollector;
+      },
+
+      getDiagnosticsMarkdown() {
+        return diagnosticCollector.formatAsMarkdown();
+      },
+
+      getDiagnosticData() {
+        return diagnosticCollector.collect();
+      },
+
+      // Recording session methods
+      startRecording() {
+        return diagnosticCollector.startRecording();
+      },
+
+      stopRecording() {
+        return diagnosticCollector.stopRecording();
+      },
+
+      cancelRecording() {
+        diagnosticCollector.cancelRecording();
+      },
+
+      isRecording() {
+        return diagnosticCollector.isRecording();
+      },
+
+      getRecordingSession() {
+        return diagnosticCollector.getRecordingSession();
+      },
     };
 
     Traklet.instance = instance;
@@ -210,6 +295,9 @@ export class Traklet {
   private static destroy(adapter: IBackendAdapter): void {
     // Disconnect adapter
     void adapter.disconnect();
+
+    // Stop diagnostic collector
+    getDiagnosticCollector().destroy();
 
     // Emit disconnect event
     getEventBus().emit('connection:disconnected', {});
