@@ -1,0 +1,65 @@
+/**
+ * Core module barrel export
+ */
+
+// Event Bus
+export { EventBus, getEventBus, resetEventBus } from './EventBus';
+export type {
+  TrakletEventType,
+  TrakletEventPayloads,
+  TrakletEventHandler,
+} from './EventBus';
+
+// State Manager
+export {
+  StateManager,
+  getStateManager,
+  resetStateManager,
+  selectConnectionStatus,
+  selectCurrentProject,
+  selectIssues,
+  selectSelectedIssue,
+  selectViewState,
+  selectIsOnline,
+  selectFilters,
+} from './StateManager';
+export type {
+  TrakletState,
+  WidgetViewState,
+  ConnectionStatus,
+  IssueFilters,
+  StateSubscriber,
+  StateSelector,
+} from './StateManager';
+
+// Config Manager
+export {
+  ConfigManager,
+  getConfigManager,
+  resetConfigManager,
+} from './ConfigManager';
+export type {
+  TrakletConfig,
+  TrakletUser,
+  AnonymousMode,
+  PermissionConfig,
+  ThemeConfig,
+  PositionConfig,
+  ConfigValidationResult,
+} from './ConfigManager';
+
+// Auth Manager
+export {
+  AuthManager,
+  getAuthManager,
+  resetAuthManager,
+} from './AuthManager';
+export type { AuthHeaders, TokenInfo } from './AuthManager';
+
+// Permission Manager
+export {
+  PermissionManager,
+  getPermissionManager,
+  resetPermissionManager,
+} from './PermissionManager';
+export type { Permission, PermissionContext } from './PermissionManager';

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Traklet Bug Reporter</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-title">
+        <svg class="logo" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+        </svg>
+        <span>Traklet Reporter</span>
+      </div>
+      <button id="settingsBtn" class="icon-btn" title="Settings">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Capture View (Default) -->
+      <div id="captureView" class="view">
+        <!-- Screenshot Preview -->
+        <div class="screenshot-container">
+          <div id="screenshotPlaceholder" class="screenshot-placeholder">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+            </svg>
+            <span>Click to capture screenshot</span>
+          </div>
+          <img id="screenshotPreview" class="screenshot-preview hidden" alt="Screenshot preview">
+          <button id="retakeBtn" class="retake-btn hidden">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+            </svg>
+            Retake
+          </button>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label for="description">What's the issue?</label>
+          <textarea id="description" placeholder="Describe the bug or problem you encountered..." rows="3"></textarea>
+        </div>
+
+        <!-- Quick Options -->
+        <div class="options-row">
+          <div class="form-group half">
+            <label for="severity">Severity</label>
+            <select id="severity">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+          <div class="form-group half">
+            <label for="category">Category</label>
+            <select id="category">
+              <option value="bug" selected>Bug</option>
+              <option value="ui">UI Issue</option>
+              <option value="performance">Performance</option>
+              <option value="feature">Feature Request</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Diagnostic Options -->
+        <div class="diagnostic-options">
+          <label class="checkbox-label">
+            <input type="checkbox" id="includeConsole" checked>
+            <span>Include console logs</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="includeNetwork" checked>
+            <span>Include network errors</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="includePerformance" checked>
+            <span>Include performance data</span>
+          </label>
+        </div>
+
+        <!-- Collected Info Preview -->
+        <div id="diagnosticsPreview" class="diagnostics-preview">
+          <div class="diagnostics-header" id="toggleDiagnostics">
+            <span>Diagnostic Info</span>
+            <svg class="chevron" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+            </svg>
+          </div>
+          <div id="diagnosticsContent" class="diagnostics-content hidden">
+            <div class="diagnostic-item">
+              <span class="label">URL:</span>
+              <span id="diagUrl" class="value">-</span>
+            </div>
+            <div class="diagnostic-item">
+              <span class="label">Browser:</span>
+              <span id="diagBrowser" class="value">-</span>
+            </div>
+            <div class="diagnostic-item">
+              <span class="label">Viewport:</span>
+              <span id="diagViewport" class="value">-</span>
+            </div>
+            <div class="diagnostic-item">
+              <span class="label">Console Errors:</span>
+              <span id="diagErrors" class="value">-</span>
+            </div>
+            <div class="diagnostic-item">
+              <span class="label">JS Errors:</span>
+              <span id="diagJsErrors" class="value">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions">
+          <button id="captureBtn" class="btn btn-secondary">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9.4 10.5l4.77-8.26C13.47 2.09 12.75 2 12 2c-2.4 0-4.6.85-6.32 2.25l3.66 6.35.06-.1zM21.54 9c-.92-2.92-3.15-5.26-6-6.34L11.88 9h9.66zm.26 1h-7.49l.29.5 4.76 8.25C21 16.97 22 14.61 22 12c0-.69-.07-1.35-.2-2zM8.54 12l-3.9-6.75C3.01 7.03 2 9.39 2 12c0 .69.07 1.35.2 2h7.49l-1.15-2zm-6.08 3c.92 2.92 3.15 5.26 6 6.34L12.12 15H2.46zm11.27 0l-3.9 6.76c.7.15 1.42.24 2.17.24 2.4 0 4.6-.85 6.32-2.25l-3.66-6.35-.93 1.6z"/>
+            </svg>
+            Capture
+          </button>
+          <button id="submitBtn" class="btn btn-primary" disabled>
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+            Submit Report
+          </button>
+        </div>
+      </div>
+
+      <!-- Settings View -->
+      <div id="settingsView" class="view hidden">
+        <h3>Configuration</h3>
+
+        <div class="form-group">
+          <label for="endpoint">Traklet Endpoint URL</label>
+          <input type="url" id="endpoint" placeholder="https://your-app.com/traklet">
+          <small>The URL where your Traklet widget is hosted</small>
+        </div>
+
+        <div class="form-group">
+          <label for="token">API Token (optional)</label>
+          <input type="password" id="token" placeholder="For authenticated submissions">
+        </div>
+
+        <div class="form-group">
+          <label for="projectId">Default Project ID</label>
+          <input type="text" id="projectId" placeholder="my-project">
+        </div>
+
+        <div class="actions">
+          <button id="backBtn" class="btn btn-secondary">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+            </svg>
+            Back
+          </button>
+          <button id="saveConfigBtn" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+            </svg>
+            Save
+          </button>
+        </div>
+      </div>
+
+      <!-- Success View -->
+      <div id="successView" class="view hidden">
+        <div class="success-content">
+          <svg class="success-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+          <h3>Report Submitted!</h3>
+          <p id="successMessage">Your bug report has been saved.</p>
+          <button id="newReportBtn" class="btn btn-primary">
+            New Report
+          </button>
+        </div>
+      </div>
+
+      <!-- History View -->
+      <div id="historyView" class="view hidden">
+        <h3>Recent Reports</h3>
+        <div id="reportsList" class="reports-list">
+          <p class="empty-state">No reports yet</p>
+        </div>
+        <div class="actions">
+          <button id="historyBackBtn" class="btn btn-secondary">Back</button>
+          <button id="clearHistoryBtn" class="btn btn-danger">Clear All</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <button id="historyBtn" class="footer-btn">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+        </svg>
+        History
+      </button>
+      <span id="trakletStatus" class="traklet-status hidden">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+        </svg>
+        Widget detected
+      </span>
+      <span class="footer-version">v1.0.0</span>
+      <a href="https://traklet.dev" target="_blank" class="footer-link">Help</a>
+    </footer>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="spinner"></div>
+    <span>Processing...</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
