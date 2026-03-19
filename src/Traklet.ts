@@ -18,7 +18,7 @@ import {
   getDiagnosticCollector,
 } from './core';
 import type { TrakletConfig, DiagnosticData, RecordingSession } from './core';
-import { LocalStorageAdapter } from './adapters';
+import { LocalStorageAdapter, AzureDevOpsAdapter } from './adapters';
 import { IssueListPresenter, IssueDetailPresenter, IssueFormPresenter } from './presenters';
 import type { IWidgetPresenter } from './presenters';
 
@@ -320,8 +320,10 @@ export class Traklet {
       case 'localStorage':
         return new LocalStorageAdapter(false);
 
-      case 'github':
       case 'azure-devops':
+        return new AzureDevOpsAdapter();
+
+      case 'github':
       case 'rest':
         // TODO: Implement these adapters
         throw new Error(`Adapter '${config.adapter}' is not yet implemented`);
