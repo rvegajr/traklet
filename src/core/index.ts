@@ -81,3 +81,21 @@ export type {
   PageVisit,
   RecordingSession,
 } from './DiagnosticCollector';
+
+// Test Case Template
+export {
+  parseTestCaseBody,
+  composeTestCaseBody,
+  updateSection,
+  addJamLink,
+  addDiagnostics,
+  getSectionDefinitions,
+} from './TestCaseTemplate';
+export type {
+  TestCaseSection,
+  ParsedTestCase,
+  JamLink,
+  AttachmentRef,
+  TestCaseCreateOptions,
+  SectionRole,
+} from './TestCaseTemplate';
