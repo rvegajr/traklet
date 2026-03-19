@@ -130,6 +130,14 @@ export class DiagnosticCollector {
   private currentSession: RecordingSession | null = null;
   private pageEnteredAt: number = Date.now();
 
+  // Stored listener references for proper cleanup (MANDATE 7 compliance)
+  private errorListener: ((event: ErrorEvent) => void) | null = null;
+  private rejectionListener: ((event: PromiseRejectionEvent) => void) | null = null;
+  private clickListener: ((event: Event) => void) | null = null;
+  private submitListener: ((event: Event) => void) | null = null;
+  private visibilityListener: (() => void) | null = null;
+  private popstateListener: (() => void) | null = null;
+
   constructor(config: DiagnosticCollectorConfig = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
@@ -175,6 +183,32 @@ export class DiagnosticCollector {
           (console as unknown as Record<string, unknown>)[level] = original;
         }
       }
+    }
+
+    // Remove all global event listeners (MANDATE 7 compliance)
+    if (this.errorListener) {
+      window.removeEventListener('error', this.errorListener);
+      this.errorListener = null;
+    }
+    if (this.rejectionListener) {
+      window.removeEventListener('unhandledrejection', this.rejectionListener);
+      this.rejectionListener = null;
+    }
+    if (this.clickListener) {
+      document.removeEventListener('click', this.clickListener, { capture: true });
+      this.clickListener = null;
+    }
+    if (this.submitListener) {
+      document.removeEventListener('submit', this.submitListener, { capture: true });
+      this.submitListener = null;
+    }
+    if (this.visibilityListener) {
+      document.removeEventListener('visibilitychange', this.visibilityListener);
+      this.visibilityListener = null;
+    }
+    if (this.popstateListener) {
+      window.removeEventListener('popstate', this.popstateListener);
+      this.popstateListener = null;
     }
 
     this.initialized = false;
@@ -518,21 +552,21 @@ export class DiagnosticCollector {
   }
 
   private interceptErrors(): void {
-    const originalOnError = window.onerror;
-    window.onerror = (message, filename, lineno, colno, error) => {
+    // Use addEventListener instead of assigning window.onerror directly.
+    // This avoids clobbering the host page's error handler (MANDATE 7).
+    this.errorListener = (event: ErrorEvent) => {
       const entry: JSError = {
-        message: String(message),
-        filename: filename || 'unknown',
-        lineno: lineno || 0,
-        colno: colno || 0,
-        stack: error?.stack || null,
+        message: String(event.message),
+        filename: event.filename || 'unknown',
+        lineno: event.lineno || 0,
+        colno: event.colno || 0,
+        stack: event.error?.stack || null,
         timestamp: new Date().toISOString(),
         url: window.location.href,
       };
 
       this.jsErrors.push(entry);
 
-      // Also add to active session
       if (this.currentSession?.isActive) {
         this.currentSession.jsErrors.push(entry);
         this.persistSessionToStorage();
@@ -541,16 +575,10 @@ export class DiagnosticCollector {
       if (this.jsErrors.length > this.config.maxJsErrors) {
         this.jsErrors.shift();
       }
-
-      // Call original if exists
-      if (originalOnError) {
-        return originalOnError.call(window, message, filename, lineno, colno, error);
-      }
-      return false;
     };
+    window.addEventListener('error', this.errorListener);
 
-    const originalOnRejection = window.onunhandledrejection;
-    window.onunhandledrejection = (event: PromiseRejectionEvent) => {
+    this.rejectionListener = (event: PromiseRejectionEvent) => {
       const entry: JSError = {
         message: `Unhandled Promise Rejection: ${event.reason}`,
         filename: 'promise',
@@ -563,7 +591,6 @@ export class DiagnosticCollector {
 
       this.jsErrors.push(entry);
 
-      // Also add to active session
       if (this.currentSession?.isActive) {
         this.currentSession.jsErrors.push(entry);
         this.persistSessionToStorage();
@@ -572,17 +599,13 @@ export class DiagnosticCollector {
       if (this.jsErrors.length > this.config.maxJsErrors) {
         this.jsErrors.shift();
       }
-
-      // Call original if exists
-      if (originalOnRejection) {
-        originalOnRejection.call(window, event);
-      }
     };
+    window.addEventListener('unhandledrejection', this.rejectionListener);
   }
 
   private interceptUserActions(): void {
-    // Track clicks
-    document.addEventListener('click', (e) => {
+    // Track clicks (store reference for cleanup)
+    this.clickListener = (e: Event) => {
       const target = e.target as HTMLElement;
       const action: UserAction = {
         type: 'click',
@@ -594,7 +617,6 @@ export class DiagnosticCollector {
 
       this.userActions.push(action);
 
-      // Also add to active session
       if (this.currentSession?.isActive) {
         this.currentSession.actions.push(action);
         this.persistSessionToStorage();
@@ -603,10 +625,11 @@ export class DiagnosticCollector {
       if (this.userActions.length > this.config.maxUserActions) {
         this.userActions.shift();
       }
-    }, { passive: true, capture: true });
+    };
+    document.addEventListener('click', this.clickListener, { passive: true, capture: true });
 
-    // Track form submissions
-    document.addEventListener('submit', (e) => {
+    // Track form submissions (store reference for cleanup)
+    this.submitListener = (e: Event) => {
       const target = e.target as HTMLFormElement;
       const action: UserAction = {
         type: 'submit',
@@ -622,12 +645,12 @@ export class DiagnosticCollector {
         this.currentSession.actions.push(action);
         this.persistSessionToStorage();
       }
-    }, { passive: true, capture: true });
+    };
+    document.addEventListener('submit', this.submitListener, { passive: true, capture: true });
 
-    // Track page visibility changes (navigating away)
-    document.addEventListener('visibilitychange', () => {
+    // Track page visibility changes (store reference for cleanup)
+    this.visibilityListener = () => {
       if (document.visibilityState === 'hidden' && this.currentSession?.isActive) {
-        // User navigating away - update current page duration
         const lastPage = this.currentSession.pages[this.currentSession.pages.length - 1];
         if (lastPage && lastPage.url === window.location.href && !lastPage.duration) {
           const pages = [...this.currentSession.pages];
@@ -639,10 +662,11 @@ export class DiagnosticCollector {
           this.persistSessionToStorage();
         }
       }
-    });
+    };
+    document.addEventListener('visibilitychange', this.visibilityListener);
 
-    // Track popstate (browser back/forward)
-    window.addEventListener('popstate', () => {
+    // Track popstate (store reference for cleanup)
+    this.popstateListener = () => {
       if (this.currentSession?.isActive) {
         const action: UserAction = {
           type: 'navigation',
@@ -653,7 +677,8 @@ export class DiagnosticCollector {
         this.currentSession.actions.push(action);
         this.addPageToSession();
       }
-    });
+    };
+    window.addEventListener('popstate', this.popstateListener);
   }
 
   private addPageToSession(): void {
