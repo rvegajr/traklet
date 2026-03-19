@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Traklet Demo - Host Application</title>
+  <style>
+    /* ============================================
+       Simulated host application styles.
+       Traklet must NOT interfere with any of this.
+       ============================================ */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    .app-nav {
+      background: #1a1a2e;
+      color: white;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .app-nav h1 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .app-nav__links {
+      display: flex;
+      gap: 16px;
+    }
+
+    .app-nav__links a {
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .app-nav__links a:hover { color: white; }
+    .app-nav__links a.active { color: white; font-weight: 600; }
+
+    .app-content {
+      max-width: 960px;
+      margin: 32px auto;
+      padding: 0 24px;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .page-subtitle {
+      color: #666;
+      margin-bottom: 24px;
+      font-size: 15px;
+    }
+
+    /* Cards grid (simulated dashboard) */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 1px solid #e5e7eb;
+    }
+
+    .card h3 {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .card .value {
+      font-size: 32px;
+      font-weight: 700;
+    }
+
+    .card .trend {
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .card .trend--up { color: #16a34a; }
+    .card .trend--down { color: #dc2626; }
+
+    /* Data table */
+    .data-table {
+      width: 100%;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 1px solid #e5e7eb;
+    }
+
+    .data-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .data-table th {
+      background: #f9fafb;
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .data-table td {
+      padding: 12px 16px;
+      font-size: 14px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .data-table tr:hover td {
+      background: #f9fafb;
+    }
+
+    .status-pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status-pill--active { background: #dcfce7; color: #16a34a; }
+    .status-pill--pending { background: #fef3c7; color: #d97706; }
+    .status-pill--delayed { background: #fee2e2; color: #dc2626; }
+
+    /* Footer */
+    .app-footer {
+      text-align: center;
+      padding: 32px;
+      color: #999;
+      font-size: 13px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <!-- ============================================
+       Simulated host application (Flight Deck Pro)
+       ============================================ -->
+  <nav class="app-nav">
+    <h1>SJI Flight Deck Pro</h1>
+    <div class="app-nav__links">
+      <a href="#" class="active">Dashboard</a>
+      <a href="#">Flights</a>
+      <a href="#">Reports</a>
+      <a href="#">Settings</a>
+    </div>
+  </nav>
+
+  <main class="app-content">
+    <h2 class="page-title">Dashboard</h2>
+    <p class="page-subtitle">Flight operations overview for today</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <h3>Active Flights</h3>
+        <div class="value">24</div>
+        <div class="trend trend--up">+3 from yesterday</div>
+      </div>
+      <div class="card">
+        <h3>On-Time Rate</h3>
+        <div class="value">94.2%</div>
+        <div class="trend trend--up">+1.5% this week</div>
+      </div>
+      <div class="card">
+        <h3>Delayed</h3>
+        <div class="value">3</div>
+        <div class="trend trend--down">2 weather-related</div>
+      </div>
+      <div class="card">
+        <h3>Crew Utilization</h3>
+        <div class="value">87%</div>
+        <div class="trend trend--up">Within target</div>
+      </div>
+    </div>
+
+    <h3 class="section-title">Today's Flights</h3>
+    <div class="data-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Flight</th>
+            <th>Route</th>
+            <th>Departure</th>
+            <th>Status</th>
+            <th>Aircraft</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>SJ-101</td><td>DFW - LAX</td><td>06:30</td><td><span class="status-pill status-pill--active">On Time</span></td><td>N821SJ</td></tr>
+          <tr><td>SJ-204</td><td>LAX - SFO</td><td>08:15</td><td><span class="status-pill status-pill--active">On Time</span></td><td>N834SJ</td></tr>
+          <tr><td>SJ-312</td><td>SFO - SEA</td><td>09:45</td><td><span class="status-pill status-pill--pending">Boarding</span></td><td>N812SJ</td></tr>
+          <tr><td>SJ-405</td><td>DFW - MIA</td><td>10:00</td><td><span class="status-pill status-pill--delayed">Delayed 45m</span></td><td>N845SJ</td></tr>
+          <tr><td>SJ-118</td><td>MIA - ATL</td><td>11:30</td><td><span class="status-pill status-pill--active">On Time</span></td><td>N867SJ</td></tr>
+          <tr><td>SJ-522</td><td>ATL - ORD</td><td>13:00</td><td><span class="status-pill status-pill--pending">Scheduled</span></td><td>N891SJ</td></tr>
+          <tr><td>SJ-633</td><td>ORD - DEN</td><td>14:30</td><td><span class="status-pill status-pill--delayed">Delayed 20m</span></td><td>N823SJ</td></tr>
+          <tr><td>SJ-741</td><td>DEN - PHX</td><td>16:00</td><td><span class="status-pill status-pill--active">On Time</span></td><td>N856SJ</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    SJI Flight Deck Pro v2.4.1 | Traklet widget is injected below - it should not affect this page.
+  </footer>
+
+  <!-- ============================================
+       Traklet widget injection
+       ============================================ -->
+  <script type="module" src="/demo/main.ts"></script>
+</body>
+</html>
