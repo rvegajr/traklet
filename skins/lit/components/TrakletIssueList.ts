@@ -143,17 +143,22 @@ export class TrakletIssueList extends LitElement {
   ];
 
   @property({ type: Object })
-  presenter?: IIssueListPresenter;
+  declare presenter: IIssueListPresenter | undefined;
 
   @state()
-  private viewModel: IssueListViewModel = {
-    issues: [],
-    isLoading: false,
-    error: null,
-    pagination: { page: 1, limit: 50, total: 0, hasMore: false },
-    filters: { state: 'open', labels: [], search: '' },
-    canCreateIssue: false,
-  };
+  declare private viewModel: IssueListViewModel;
+
+  constructor() {
+    super();
+    this.viewModel = {
+      issues: [],
+      isLoading: false,
+      error: null,
+      pagination: { page: 1, limit: 50, total: 0, hasMore: false },
+      filters: { state: 'open', labels: [], search: '' },
+      canCreateIssue: false,
+    };
+  }
 
   private unsubscribe?: () => void;
 

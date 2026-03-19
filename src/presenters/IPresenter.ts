@@ -229,9 +229,14 @@ export interface IIssueDetailPresenter {
   deleteComment(commentId: string): Promise<void>;
 
   /**
-   * Navigate to edit issue
+   * Navigate to edit issue form
    */
   editIssue(): void;
+
+  /**
+   * Inline update of issue fields (for section editing in detail view)
+   */
+  updateIssueInline(updates: { title?: string; body?: string }): Promise<void>;
 
   /**
    * Go back to list

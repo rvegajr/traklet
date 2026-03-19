@@ -244,6 +244,27 @@ export class IssueDetailPresenter implements IIssueDetailPresenter {
     getStateManager().setState({ viewState: 'edit' });
   }
 
+  async updateIssueInline(updates: { title?: string; body?: string }): Promise<void> {
+    if (!this.currentIssue) return;
+
+    try {
+      const updated = await this.adapter.updateIssue(
+        this.currentProjectId,
+        this.currentIssue.id,
+        updates
+      );
+
+      this.currentIssue = updated;
+      this.viewModel = this.toDetailViewModel(updated);
+      this.notifySubscribers();
+
+      getEventBus().emit('issue:updated', { issue: updated, changes: updates });
+    } catch (error) {
+      console.error('Failed to update issue:', error);
+      throw error;
+    }
+  }
+
   goBack(): void {
     getStateManager().setState({
       viewState: 'list',
