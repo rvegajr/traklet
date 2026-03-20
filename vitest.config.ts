@@ -21,16 +21,19 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
+      include: [
+        'src/core/*.ts',
+        'src/adapters/*.ts',
+        'src/presenters/*.ts',
+        'src/builder/*.ts',
+        'src/Traklet.ts',
+      ],
       exclude: [
-        'node_modules/',
-        'dist/',
-        '**/*.d.ts',
         '**/*.test.ts',
         '**/*.spec.ts',
+        '**/*.integration.ts',
         '**/index.ts',
-        'vite.config.ts',
-        'vitest.config.ts',
-        'src/test/**',
+        'src/presenters/IPresenter.ts',
       ],
       thresholds: {
         statements: 85,

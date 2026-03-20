@@ -303,5 +303,325 @@ describe('LocalStorageAdapter - Specific Features', () => {
       const issues = await adapter.getIssues('project-1');
       expect(issues.items).toHaveLength(0);
     });
+
+    it('should clear comments along with issues', async () => {
+      const issue = await adapter.createIssue('project-1', {
+        title: 'Issue with Comments',
+        body: 'Test',
+      });
+
+      await adapter.addComment('project-1', issue.id, { body: 'A comment' });
+
+      adapter.clearAllData();
+
+      const comments = await adapter.getComments('project-1', issue.id);
+      expect(comments).toHaveLength(0);
+    });
+  });
+
+  describe('IIssueDeleter - additional', () => {
+    it('should verify issue no longer exists after delete', async () => {
+      const issue = await adapter.createIssue('project-1', {
+        title: 'Will be Deleted',
+        body: 'Check existence',
+      });
+
+      const existsBefore = await adapter.issueExists('project-1', issue.id);
+      expect(existsBefore).toBe(true);
+
+      await adapter.deleteIssue('project-1', issue.id);
+
+      const existsAfter = await adapter.issueExists('project-1', issue.id);
+      expect(existsAfter).toBe(false);
+
+      await expect(
+        adapter.getIssue('project-1', issue.id)
+      ).rejects.toThrow('Issue not found');
+    });
+  });
+
+  describe('ICommentManager - additional', () => {
+    it('should verify full comment structure', async () => {
+      const issue = await adapter.createIssue('project-1', {
+        title: 'Comment Structure Test',
+        body: 'Test body',
+      });
+
+      const comment = await adapter.addComment('project-1', issue.id, {
+        body: 'Structured comment',
+      });
+
+      expect(comment.id).toEqual(expect.any(String));
+      expect(comment.body).toBe('Structured comment');
+      expect(comment.author).toEqual(
+        expect.objectContaining({
+          id: expect.any(String),
+          name: expect.any(String),
+          email: expect.any(String),
+        })
+      );
+      expect(comment.createdAt).toBeInstanceOf(Date);
+      expect(comment.updatedAt).toBeInstanceOf(Date);
+      expect(comment.attachments).toEqual([]);
+    });
+
+    it('should decrement comment count is not affected by deleteComment', async () => {
+      const issue = await adapter.createIssue('project-1', {
+        title: 'Comment Count Test',
+        body: 'Test body',
+      });
+
+      const c1 = await adapter.addComment('project-1', issue.id, { body: 'Comment 1' });
+      await adapter.addComment('project-1', issue.id, { body: 'Comment 2' });
+
+      const beforeDelete = await adapter.getIssue('project-1', issue.id);
+      expect(beforeDelete.commentCount).toBe(2);
+
+      await adapter.deleteComment('project-1', issue.id, c1.id);
+
+      const comments = await adapter.getComments('project-1', issue.id);
+      expect(comments).toHaveLength(1);
+      expect(comments[0]?.body).toBe('Comment 2');
+    });
+
+    it('should throw when deleting non-existent comment', async () => {
+      const issue = await adapter.createIssue('project-1', {
+        title: 'Delete Non-Existent Comment',
+        body: 'Test body',
+      });
+
+      await expect(
+        adapter.deleteComment('project-1', issue.id, 'non-existent-comment')
+      ).rejects.toThrow('Comment not found');
+    });
+
+    it('should throw when updating non-existent comment', async () => {
+      const issue = await adapter.createIssue('project-1', {
+        title: 'Update Non-Existent Comment',
+        body: 'Test body',
+      });
+
+      await expect(
+        adapter.updateComment('project-1', issue.id, 'non-existent-comment', {
+          body: 'Updated',
+        })
+      ).rejects.toThrow('Comment not found');
+    });
+  });
+
+  describe('ILabelReader - additional', () => {
+    it('should return labels with correct structure', async () => {
+      const labels = await adapter.getLabels('project-1');
+
+      for (const label of labels) {
+        expect(label).toEqual(
+          expect.objectContaining({
+            id: expect.any(String),
+            name: expect.any(String),
+            color: expect.any(String),
+          })
+        );
+      }
+    });
+
+    it('should resolve known labels and skip unknown labels in createIssue', async () => {
+      const issue = await adapter.createIssue('project-1', {
+        title: 'Label Resolution',
+        body: 'Test',
+        labels: ['bug', 'nonexistent-label'],
+      });
+
+      expect(issue.labels).toHaveLength(1);
+      expect(issue.labels[0]?.name).toBe('bug');
+    });
+  });
+
+  describe('Filtering - additional', () => {
+    beforeEach(async () => {
+      // Create issues with different creators/assignees for filter tests
+      await adapter.createIssue('project-1', {
+        title: 'Searchable Alpha Issue',
+        body: 'Contains unique keyword platypus',
+        labels: ['bug'],
+      });
+
+      await adapter.createIssue('project-1', {
+        title: 'Beta Feature',
+        body: 'Another issue body',
+        labels: ['feature'],
+      });
+    });
+
+    it('should filter by search query matching title', async () => {
+      const results = await adapter.getIssues('project-1', { search: 'Alpha' });
+
+      expect(results.items).toHaveLength(1);
+      expect(results.items[0]?.title).toBe('Searchable Alpha Issue');
+    });
+
+    it('should filter by search query matching body', async () => {
+      const results = await adapter.getIssues('project-1', { search: 'platypus' });
+
+      expect(results.items).toHaveLength(1);
+      expect(results.items[0]?.title).toBe('Searchable Alpha Issue');
+    });
+
+    it('should filter by search case-insensitively', async () => {
+      const results = await adapter.getIssues('project-1', { search: 'ALPHA' });
+
+      expect(results.items).toHaveLength(1);
+      expect(results.items[0]?.title).toBe('Searchable Alpha Issue');
+    });
+
+    it('should filter by assignee', async () => {
+      // Create issue and update with assignee
+      const issue = await adapter.createIssue('project-1', {
+        title: 'Assigned Issue',
+        body: 'Has assignee',
+      });
+
+      // The default user is 'local-user', so filtering by creator
+      const results = await adapter.getIssues('project-1', { assignee: 'local-user' });
+
+      // No issues should have assignees since createIssue sets assignees to []
+      expect(results.items).toHaveLength(0);
+
+      // Verify the issue itself has no assignees
+      const fetched = await adapter.getIssue('project-1', issue.id);
+      expect(fetched.assignees).toHaveLength(0);
+    });
+
+    it('should filter by creator', async () => {
+      const results = await adapter.getIssues('project-1', { creator: 'local-user' });
+
+      // All issues created by the local user
+      expect(results.items.length).toBeGreaterThan(0);
+      for (const issue of results.items) {
+        expect(issue.createdBy.id).toBe('local-user');
+      }
+    });
+
+    it('should return empty when creator filter does not match', async () => {
+      const results = await adapter.getIssues('project-1', { creator: 'unknown-user' });
+
+      expect(results.items).toHaveLength(0);
+    });
+
+    it('should filter by label', async () => {
+      const results = await adapter.getIssues('project-1', { labels: ['feature'] });
+
+      expect(results.items).toHaveLength(1);
+      expect(results.items[0]?.title).toBe('Beta Feature');
+    });
+
+    it('should return all issues when no filters applied', async () => {
+      const results = await adapter.getIssues('project-1');
+
+      expect(results.items).toHaveLength(2);
+    });
+  });
+
+  describe('Sorting', () => {
+    it('should sort by updated timestamp', async () => {
+      const issue1 = await adapter.createIssue('project-1', {
+        title: 'First Created',
+        body: 'Created first',
+      });
+
+      // Small delay to ensure distinct timestamps
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      await adapter.createIssue('project-1', {
+        title: 'Second Created',
+        body: 'Created second',
+      });
+
+      // Another delay, then update issue1 so it has the newest updatedAt
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      await adapter.updateIssue('project-1', issue1.id, { body: 'Updated body' });
+
+      const descResults = await adapter.getIssues('project-1', {
+        sort: 'updated',
+        order: 'desc',
+      });
+
+      expect(descResults.items[0]?.title).toBe('First Created');
+      expect(descResults.items[1]?.title).toBe('Second Created');
+
+      const ascResults = await adapter.getIssues('project-1', {
+        sort: 'updated',
+        order: 'asc',
+      });
+
+      expect(ascResults.items[0]?.title).toBe('Second Created');
+      expect(ascResults.items[1]?.title).toBe('First Created');
+    });
+
+    it('should sort by priority', async () => {
+      await adapter.createIssue('project-1', {
+        title: 'Low Priority',
+        body: 'Low',
+        priority: 'low',
+      });
+
+      await adapter.createIssue('project-1', {
+        title: 'Critical Priority',
+        body: 'Critical',
+        priority: 'critical',
+      });
+
+      await adapter.createIssue('project-1', {
+        title: 'Medium Priority',
+        body: 'Medium',
+        priority: 'medium',
+      });
+
+      const descResults = await adapter.getIssues('project-1', {
+        sort: 'priority',
+        order: 'desc',
+      });
+
+      expect(descResults.items[0]?.title).toBe('Critical Priority');
+      expect(descResults.items[1]?.title).toBe('Medium Priority');
+      expect(descResults.items[2]?.title).toBe('Low Priority');
+
+      const ascResults = await adapter.getIssues('project-1', {
+        sort: 'priority',
+        order: 'asc',
+      });
+
+      expect(ascResults.items[0]?.title).toBe('Low Priority');
+      expect(ascResults.items[1]?.title).toBe('Medium Priority');
+      expect(ascResults.items[2]?.title).toBe('Critical Priority');
+    });
+  });
+
+  describe('issueExists', () => {
+    it('should return true for an existing issue', async () => {
+      const issue = await adapter.createIssue('project-1', {
+        title: 'Existing Issue',
+        body: 'Test',
+      });
+
+      const exists = await adapter.issueExists('project-1', issue.id);
+      expect(exists).toBe(true);
+    });
+
+    it('should return false for a non-existent issue', async () => {
+      const exists = await adapter.issueExists('project-1', 'non-existent-id');
+      expect(exists).toBe(false);
+    });
+
+    it('should return false after issue is deleted', async () => {
+      const issue = await adapter.createIssue('project-1', {
+        title: 'Soon Deleted',
+        body: 'Test',
+      });
+
+      await adapter.deleteIssue('project-1', issue.id);
+
+      const exists = await adapter.issueExists('project-1', issue.id);
+      expect(exists).toBe(false);
+    });
   });
 });
