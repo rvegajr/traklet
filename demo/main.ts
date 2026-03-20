@@ -14,13 +14,13 @@ import { composeTestCaseBody } from '../src/core/TestCaseTemplate';
 import type { TrakletInstance } from '../src/Traklet';
 import type { TrakletConfig } from '../src/core';
 
-// Vite imports JSON files at build time — the values are baked into the bundle.
-// If the file doesn't exist, the import returns the default (empty object).
+// Use Vite's glob import to safely load settings if the file exists.
+// Glob returns an empty object if no files match — no build errors.
 let fileSettings: Record<string, unknown> = {};
-try {
-  fileSettings = (await import('../.traklet/settings.json', { assert: { type: 'json' } })).default;
-} catch {
-  // settings.json doesn't exist — use demo mode
+const settingsModules = import.meta.glob('../.traklet/settings.json', { eager: true }) as Record<string, { default: Record<string, unknown> }>;
+const settingsEntry = Object.values(settingsModules)[0];
+if (settingsEntry) {
+  fileSettings = settingsEntry.default;
 }
 
 async function initTraklet(): Promise<void> {
