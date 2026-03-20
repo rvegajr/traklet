@@ -20,6 +20,8 @@ import { parseTestCaseBody, addJamLink, updateSection, addDiagnostics } from '@/
 import type { ParsedTestCase, TestCaseSection } from '@/core/TestCaseTemplate';
 import { getTestRunManager } from '@/core/TestRunManager';
 import type { TestStatus } from '@/core/TestRunManager';
+import { renderMarkdown } from '../utils/markdown';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 
 @customElement('traklet-issue-detail')
 export class TrakletIssueDetail extends LitElement {
@@ -167,26 +169,65 @@ export class TrakletIssueDetail extends LitElement {
         border-radius: var(--traklet-radius-md);
         border: 1px solid var(--traklet-border-muted);
         font-size: 13px;
-        line-height: 1.5;
-        white-space: pre-wrap;
-        word-wrap: break-word;
+        line-height: 1.6;
+        overflow-wrap: break-word;
+        text-align: left;
+      }
+
+      .section__content p {
+        margin: 0 0 6px 0;
+      }
+
+      .section__content p:last-child {
+        margin-bottom: 0;
       }
 
       .section__content--editable {
         border-color: var(--traklet-primary);
         border-style: dashed;
         background: var(--traklet-bg);
+        cursor: pointer;
       }
 
-      /* Steps section - clear numbered layout */
-      .section__content ol {
-        margin: 0;
-        padding-left: 20px;
+      /* Lists */
+      .section__content ol,
+      .section__content ul {
+        margin: 4px 0;
+        padding-left: 24px;
       }
 
-      .section__content ol li {
-        margin-bottom: 4px;
-        padding-left: 4px;
+      .section__content ol li,
+      .section__content ul li {
+        margin-bottom: 3px;
+      }
+
+      /* Inline code */
+      .section__content code {
+        background: var(--traklet-bg-hover);
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-size: 12px;
+      }
+
+      /* Inline images (pasted screenshots) */
+      .section__content img {
+        max-width: 100%;
+        border-radius: var(--traklet-radius-md);
+        margin: 4px 0;
+        border: 1px solid var(--traklet-border-muted);
+      }
+
+      .section__content strong {
+        font-weight: 600;
+      }
+
+      .section__content a {
+        color: var(--traklet-primary);
+        text-decoration: none;
+      }
+
+      .section__content a:hover {
+        text-decoration: underline;
       }
 
       /* Expected result - highlighted for visibility */
@@ -277,11 +318,12 @@ export class TrakletIssueDetail extends LitElement {
 
       /* Guidance callout */
       .callout {
-        padding: var(--traklet-space-md);
+        padding: var(--traklet-space-sm) var(--traklet-space-md);
         border-radius: var(--traklet-radius-md);
-        font-size: var(--traklet-font-size-sm);
+        font-size: 12px;
         line-height: 1.5;
         margin-top: var(--traklet-space-sm);
+        text-align: left;
       }
 
       .callout--info {
@@ -393,11 +435,14 @@ export class TrakletIssueDetail extends LitElement {
       }
 
       .comment__body {
-        font-size: var(--traklet-font-size-sm);
+        font-size: 13px;
         line-height: 1.5;
         color: var(--traklet-text);
-        white-space: pre-wrap;
-        word-wrap: break-word;
+        overflow-wrap: break-word;
+      }
+
+      .comment__body p {
+        margin: 0;
       }
 
       .comment__actions {
@@ -714,16 +759,24 @@ export class TrakletIssueDetail extends LitElement {
   }
 
   private renderSectionContent(section: TestCaseSection) {
-    const isEmpty = !section.content || section.content.includes('_Not yet');
+    const isEmpty = !section.content || section.content.includes('_Not yet') || section.content.includes('_No ');
+
+    const placeholders: Record<string, string> = {
+      'actual-result': 'Describe what happened during testing...',
+      'notes': 'Add observations, workarounds, or feedback...',
+      'evidence': 'Attach a Jam recording or screenshot...',
+    };
+    const placeholder = placeholders[section.id] ?? `Click to add ${section.title.toLowerCase()}...`;
 
     return html`
       <div
         class="section__content ${section.editable ? 'section__content--editable' : ''}"
         @click=${() => section.editable && this.startEditingSection(section)}
+        @paste=${section.editable ? (e: ClipboardEvent) => this.handleImagePaste(e, section) : nothing}
       >
         ${isEmpty
-          ? html`<span class="section__placeholder">Click to add ${section.title.toLowerCase()}...</span>`
-          : section.content}
+          ? html`<span class="section__placeholder">${placeholder}</span>`
+          : unsafeHTML(renderMarkdown(section.content))}
       </div>
     `;
   }
@@ -837,8 +890,8 @@ export class TrakletIssueDetail extends LitElement {
     const jamLinks = this.parsedBody?.jamLinks ?? [];
 
     return html`
-      <div class="issue-body" data-testid="traklet-issue-body">
-        ${vm.body}
+      <div class="issue-body section__content" data-testid="traklet-issue-body">
+        ${unsafeHTML(renderMarkdown(vm.body))}
       </div>
       ${jamLinks.length > 0
         ? html`
@@ -1062,7 +1115,7 @@ export class TrakletIssueDetail extends LitElement {
           <span class="comment__author">${comment.author.name}</span>
           <span class="comment__time">${comment.createdAt}</span>
         </div>
-        <div class="comment__body">${comment.body}</div>
+        <div class="comment__body">${unsafeHTML(renderMarkdown(comment.body))}</div>
         ${comment.canEdit || comment.canDelete ? html`
           <div class="comment__actions">
             ${comment.canEdit ? html`
@@ -1135,6 +1188,39 @@ export class TrakletIssueDetail extends LitElement {
 
   private async handleDeleteComment(commentId: string) {
     await this.presenter?.deleteComment(commentId);
+  }
+
+  private async handleImagePaste(e: ClipboardEvent, section: TestCaseSection) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const blob = item.getAsFile();
+        if (!blob) return;
+
+        // Convert to base64 data URL
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const dataUrl = reader.result as string;
+          const imgMarkdown = `\n![screenshot](${dataUrl})\n`;
+
+          // Append to section content
+          const currentContent = section.content.includes('_Not yet') || section.content.includes('_No ')
+            ? ''
+            : section.content;
+          const newContent = currentContent + imgMarkdown;
+
+          if (this.presenter && this.viewModel) {
+            const updatedBody = updateSection(this.viewModel.body, section.id, newContent);
+            await this.presenter.updateIssueInline({ body: updatedBody });
+          }
+        };
+        reader.readAsDataURL(blob);
+        return;
+      }
+    }
   }
 
   private scrollToSection(sectionId: string) {
