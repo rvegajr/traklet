@@ -1,8 +1,12 @@
 /**
  * TrakletWidget - Main widget container
  *
- * Anchored icon in corner of screen. Click to expand panel.
- * Click again (or X) to collapse back to icon. Draggable.
+ * Three modes:
+ * - Floating: draggable popup (400px wide, default)
+ * - Snapped left: full-height sidebar on left edge, resizable width
+ * - Snapped right: full-height sidebar on right edge, resizable width
+ *
+ * Snap triggers: drag to edge, or double-click header.
  * All rendering in Shadow DOM - zero host page interference.
  */
 
@@ -13,6 +17,8 @@ import type { TrakletInstance } from '../../../src/Traklet';
 import type { Project } from '../../../src/models';
 import './TrakletIssueList';
 import './TrakletIssueDetail';
+
+type PanelMode = 'floating' | 'snapped-left' | 'snapped-right';
 
 @customElement('traklet-widget')
 export class TrakletWidget extends LitElement {
@@ -27,22 +33,37 @@ export class TrakletWidget extends LitElement {
         z-index: 9999;
       }
 
-      /* Default corner positions (overridden when dragged) */
-      :host([position='bottom-right']:not([data-dragged])) {
+      /* Default corner positions (overridden when dragged or snapped) */
+      :host([position='bottom-right']:not([data-dragged]):not([data-snap-mode])) {
         bottom: 20px;
         right: 20px;
       }
-      :host([position='bottom-left']:not([data-dragged])) {
+      :host([position='bottom-left']:not([data-dragged]):not([data-snap-mode])) {
         bottom: 20px;
         left: 20px;
       }
-      :host([position='top-right']:not([data-dragged])) {
+      :host([position='top-right']:not([data-dragged]):not([data-snap-mode])) {
         top: 20px;
         right: 20px;
       }
-      :host([position='top-left']:not([data-dragged])) {
+      :host([position='top-left']:not([data-dragged]):not([data-snap-mode])) {
         top: 20px;
         left: 20px;
+      }
+
+      /* ========== Snapped modes ========== */
+      :host([data-snap-mode='snapped-left']) {
+        top: 0 !important;
+        left: 0 !important;
+        right: auto !important;
+        bottom: auto !important;
+      }
+
+      :host([data-snap-mode='snapped-right']) {
+        top: 0 !important;
+        right: 0 !important;
+        left: auto !important;
+        bottom: auto !important;
       }
 
       /* ========== Anchor icon ========== */
@@ -63,7 +84,6 @@ export class TrakletWidget extends LitElement {
         position: relative;
         border: none;
         outline: none;
-        /* Gentle pulse to draw attention on first load */
         animation: traklet-anchor-pulse 2s ease-in-out 3;
       }
 
@@ -83,7 +103,6 @@ export class TrakletWidget extends LitElement {
         animation: none;
       }
 
-      /* Subtle pulse ring on load to catch attention */
       @keyframes traklet-anchor-pulse {
         0%, 100% {
           box-shadow:
@@ -97,7 +116,6 @@ export class TrakletWidget extends LitElement {
         }
       }
 
-      /* Tooltip on hover */
       .anchor__tooltip {
         position: absolute;
         white-space: nowrap;
@@ -112,7 +130,6 @@ export class TrakletWidget extends LitElement {
         transition: opacity 150ms ease;
       }
 
-      /* Position tooltip based on widget corner */
       :host([position='bottom-right']) .anchor__tooltip,
       :host([position='top-right']) .anchor__tooltip {
         right: calc(100% + 10px);
@@ -125,7 +142,6 @@ export class TrakletWidget extends LitElement {
         top: 50%;
         transform: translateY(-50%);
       }
-      /* When dragged, default to left of icon */
       :host([data-dragged]) .anchor__tooltip {
         right: calc(100% + 10px);
         left: auto;
@@ -137,7 +153,6 @@ export class TrakletWidget extends LitElement {
         opacity: 1;
       }
 
-      /* Notification badge on anchor */
       .anchor__badge {
         position: absolute;
         top: -4px;
@@ -158,12 +173,11 @@ export class TrakletWidget extends LitElement {
         box-shadow: 0 1px 3px rgba(0,0,0,0.2);
       }
 
-      /* Hide anchor when panel is open */
       .anchor--hidden {
         display: none;
       }
 
-      /* ========== Panel ========== */
+      /* ========== Panel (floating mode) ========== */
       .panel {
         width: 400px;
         max-width: calc(100vw - 40px);
@@ -174,7 +188,7 @@ export class TrakletWidget extends LitElement {
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        /* Expand/collapse animation */
+        position: relative;
         animation: traklet-panel-in 200ms ease forwards;
         transform-origin: bottom right;
       }
@@ -194,25 +208,35 @@ export class TrakletWidget extends LitElement {
       }
 
       @keyframes traklet-panel-in {
-        from {
-          opacity: 0;
-          transform: scale(0.85);
-        }
-        to {
-          opacity: 1;
-          transform: scale(1);
-        }
+        from { opacity: 0; transform: scale(0.85); }
+        to { opacity: 1; transform: scale(1); }
       }
 
       @keyframes traklet-panel-out {
-        from {
-          opacity: 1;
-          transform: scale(1);
-        }
-        to {
-          opacity: 0;
-          transform: scale(0.85);
-        }
+        from { opacity: 1; transform: scale(1); }
+        to { opacity: 0; transform: scale(0.85); }
+      }
+
+      /* ========== Panel (snapped mode overrides) ========== */
+      :host([data-snap-mode]) .panel {
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+        box-shadow: 2px 0 12px rgba(0, 0, 0, 0.1);
+        transition: width 200ms ease;
+      }
+
+      :host([data-snap-mode='snapped-left']) .panel {
+        transform-origin: top left;
+      }
+
+      :host([data-snap-mode='snapped-right']) .panel {
+        transform-origin: top right;
+        box-shadow: -2px 0 12px rgba(0, 0, 0, 0.1);
+      }
+
+      :host([data-snap-mode]) .panel__body {
+        max-height: none;
       }
 
       /* ========== Header (drag handle) ========== */
@@ -291,7 +315,74 @@ export class TrakletWidget extends LitElement {
         background: var(--traklet-warning);
       }
 
-      /* ========== Minimize button ========== */
+      /* ========== Resize handle ========== */
+      .panel__resize-handle {
+        display: none;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 6px;
+        cursor: col-resize;
+        background: transparent;
+        z-index: 2;
+      }
+
+      .panel__resize-handle::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 2px;
+        height: 32px;
+        border-radius: 1px;
+        background: var(--traklet-border);
+        left: 2px;
+        transition: background 150ms ease, height 150ms ease;
+      }
+
+      .panel__resize-handle:hover::after,
+      .panel__resize-handle--active::after {
+        background: var(--traklet-primary);
+        height: 48px;
+      }
+
+      :host([data-snap-mode='snapped-left']) .panel__resize-handle {
+        display: block;
+        right: 0;
+      }
+
+      :host([data-snap-mode='snapped-right']) .panel__resize-handle {
+        display: block;
+        left: 0;
+      }
+
+      /* ========== Snap zone indicator ========== */
+      .snap-indicator {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: var(--traklet-primary);
+        opacity: 0.5;
+        z-index: 9998;
+        pointer-events: none;
+        animation: traklet-snap-glow 600ms ease-in-out infinite alternate;
+      }
+
+      .snap-indicator--left {
+        left: 0;
+      }
+
+      .snap-indicator--right {
+        right: 0;
+      }
+
+      @keyframes traklet-snap-glow {
+        from { opacity: 0.3; width: 4px; }
+        to { opacity: 0.6; width: 6px; }
+      }
+
+      /* ========== Icon buttons ========== */
       .btn-icon {
         width: 28px;
         height: 28px;
@@ -327,6 +418,10 @@ export class TrakletWidget extends LitElement {
   @state() declare private projects: readonly Project[];
   @state() declare private isDragging: boolean;
   @state() declare private isAnchorDragging: boolean;
+  @state() declare private panelMode: PanelMode;
+  @state() declare private snappedWidth: number;
+  @state() declare private isResizing: boolean;
+  @state() declare private snapIndicator: 'left' | 'right' | null;
 
   constructor() {
     super();
@@ -338,11 +433,15 @@ export class TrakletWidget extends LitElement {
     this.projects = [];
     this.isDragging = false;
     this.isAnchorDragging = false;
+    this.panelMode = 'floating';
+    this.snappedWidth = 400;
+    this.isResizing = false;
+    this.snapIndicator = null;
   }
 
   private unsubscribeViewState?: () => void;
 
-  // Drag state (MANDATE 7: listeners stored for cleanup)
+  // Drag state (MANDATE 7: all listeners stored for cleanup)
   private dragOffsetX = 0;
   private dragOffsetY = 0;
   private dragStartX = 0;
@@ -353,7 +452,16 @@ export class TrakletWidget extends LitElement {
   private boundOnAnchorDragMove: ((e: MouseEvent) => void) | null = null;
   private boundOnAnchorDragEnd: ((e: MouseEvent) => void) | null = null;
 
+  // Resize state
+  private resizeStartX = 0;
+  private resizeStartWidth = 0;
+  private boundOnResizeMove: ((e: MouseEvent) => void) | null = null;
+  private boundOnResizeEnd: (() => void) | null = null;
+
   private static readonly POSITION_STORAGE_KEY = '__traklet_widget_position__';
+  private static readonly SNAP_THRESHOLD = 50;
+  private static readonly MIN_SNAP_WIDTH = 320;
+  private static readonly MAX_SNAP_WIDTH_RATIO = 0.5;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -366,6 +474,7 @@ export class TrakletWidget extends LitElement {
     this.unsubscribeViewState?.();
     this.cleanupDragListeners();
     this.cleanupAnchorDragListeners();
+    this.cleanupResizeListeners();
   }
 
   override updated(changedProperties: Map<string, unknown>): void {
@@ -398,6 +507,9 @@ export class TrakletWidget extends LitElement {
     if (!this.instance) return nothing;
 
     return html`
+      ${this.snapIndicator ? html`
+        <div class="snap-indicator snap-indicator--${this.snapIndicator}"></div>
+      ` : nothing}
       ${this.isOpen || this.isClosing ? this.renderPanel() : nothing}
       <button
         class="anchor ${this.isOpen ? 'anchor--hidden' : ''} ${this.isAnchorDragging ? 'anchor--dragging' : ''}"
@@ -412,12 +524,23 @@ export class TrakletWidget extends LitElement {
   }
 
   private renderPanel() {
+    const isSnapped = this.panelMode !== 'floating';
+    const panelStyle = isSnapped ? `width: ${this.snappedWidth}px;` : '';
+
     return html`
       <div
         class="panel ${this.isClosing ? 'panel--closing' : ''}"
+        style=${panelStyle}
         data-testid="traklet-widget"
         @animationend=${this.handleAnimationEnd}
       >
+        ${isSnapped ? html`
+          <div
+            class="panel__resize-handle ${this.isResizing ? 'panel__resize-handle--active' : ''}"
+            data-testid="traklet-resize-handle"
+            @mousedown=${this.handleResizeStart}
+          ></div>
+        ` : nothing}
         ${this.renderHeader()}
         <div class="panel__body">${this.renderBody()}</div>
         ${this.renderFooter()}
@@ -430,6 +553,7 @@ export class TrakletWidget extends LitElement {
       <div
         class="panel__header ${this.isDragging ? 'panel__header--dragging' : ''}"
         @mousedown=${this.handleDragStart}
+        @dblclick=${this.handleHeaderDoubleClick}
       >
         <h2 class="panel__title">
           ${this.viewState !== 'list'
@@ -523,16 +647,11 @@ export class TrakletWidget extends LitElement {
 
   private getTitle(): string {
     switch (this.viewState) {
-      case 'list':
-        return 'Issues';
-      case 'detail':
-        return 'Details';
-      case 'create':
-        return 'New Issue';
-      case 'edit':
-        return 'Edit Issue';
-      default:
-        return 'Traklet';
+      case 'list': return 'Issues';
+      case 'detail': return 'Details';
+      case 'create': return 'New Issue';
+      case 'edit': return 'Edit Issue';
+      default: return 'Traklet';
     }
   }
 
@@ -547,7 +666,6 @@ export class TrakletWidget extends LitElement {
   }
 
   private handleClose() {
-    // Start close animation, actual close happens on animationend
     this.isClosing = true;
   }
 
@@ -571,6 +689,51 @@ export class TrakletWidget extends LitElement {
     const select = e.target as HTMLSelectElement;
     await this.instance?.switchProject(select.value);
     this.currentProject = this.instance?.getCurrentProject() ?? null;
+  }
+
+  // ============================================
+  // Snap / Unsnap
+  // ============================================
+
+  private snapTo(mode: 'snapped-left' | 'snapped-right') {
+    this.panelMode = mode;
+    this.setAttribute('data-snap-mode', mode);
+    this.removeAttribute('data-dragged');
+    this.style.left = '';
+    this.style.top = '';
+    this.style.right = '';
+    this.style.bottom = '';
+    this.savePosition();
+  }
+
+  private unsnap() {
+    this.panelMode = 'floating';
+    this.removeAttribute('data-snap-mode');
+  }
+
+  private handleHeaderDoubleClick(e: MouseEvent) {
+    // Ignore if mouse moved (was a drag, not a true double-click)
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('select')) return;
+
+    e.preventDefault();
+
+    if (this.panelMode !== 'floating') {
+      // Unsnap to center of screen
+      this.unsnap();
+      this.setAttribute('data-dragged', '');
+      this.style.left = `${(window.innerWidth - 400) / 2}px`;
+      this.style.top = `${(window.innerHeight - 600) / 2}px`;
+      this.style.right = 'auto';
+      this.style.bottom = 'auto';
+      this.savePosition();
+    } else {
+      // Snap to nearest edge
+      const rect = this.getBoundingClientRect();
+      const distToLeft = rect.left;
+      const distToRight = window.innerWidth - rect.right;
+      this.snapTo(distToLeft < distToRight ? 'snapped-left' : 'snapped-right');
+    }
   }
 
   // ============================================
@@ -598,7 +761,6 @@ export class TrakletWidget extends LitElement {
     const dx = e.clientX - this.dragStartX;
     const dy = e.clientY - this.dragStartY;
 
-    // 5px threshold to distinguish click from drag
     if (!this.didDrag && Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
 
     this.didDrag = true;
@@ -618,11 +780,9 @@ export class TrakletWidget extends LitElement {
     this.cleanupAnchorDragListeners();
 
     if (this.didDrag) {
-      // Was a drag — save position, don't open panel
       this.isAnchorDragging = false;
       this.savePosition();
     } else {
-      // Was a click — open the panel
       this.handleOpen();
     }
   }
@@ -639,7 +799,7 @@ export class TrakletWidget extends LitElement {
   }
 
   // ============================================
-  // Panel header drag
+  // Panel header drag (with edge snap detection)
   // ============================================
 
   private handleDragStart(e: MouseEvent) {
@@ -662,21 +822,50 @@ export class TrakletWidget extends LitElement {
   private handleDragMove(e: MouseEvent) {
     if (!this.isDragging) return;
 
-    const x = Math.max(0, Math.min(e.clientX - this.dragOffsetX, window.innerWidth - 60));
-    const y = Math.max(0, Math.min(e.clientY - this.dragOffsetY, window.innerHeight - 40));
+    // Edge detection for snap indicators
+    if (e.clientX < TrakletWidget.SNAP_THRESHOLD) {
+      this.snapIndicator = 'left';
+    } else if (e.clientX > window.innerWidth - TrakletWidget.SNAP_THRESHOLD) {
+      this.snapIndicator = 'right';
+    } else {
+      this.snapIndicator = null;
+    }
 
-    this.setAttribute('data-dragged', '');
-    this.style.left = `${x}px`;
-    this.style.top = `${y}px`;
-    this.style.right = 'auto';
-    this.style.bottom = 'auto';
+    // If snapped and dragged away from edge, unsnap
+    if (this.panelMode === 'snapped-left' && e.clientX > this.snappedWidth + TrakletWidget.SNAP_THRESHOLD) {
+      this.unsnap();
+    } else if (this.panelMode === 'snapped-right' && e.clientX < window.innerWidth - this.snappedWidth - TrakletWidget.SNAP_THRESHOLD) {
+      this.unsnap();
+    }
+
+    // Update position in floating mode
+    if (this.panelMode === 'floating') {
+      const x = Math.max(0, Math.min(e.clientX - this.dragOffsetX, window.innerWidth - 60));
+      const y = Math.max(0, Math.min(e.clientY - this.dragOffsetY, window.innerHeight - 40));
+
+      this.setAttribute('data-dragged', '');
+      this.style.left = `${x}px`;
+      this.style.top = `${y}px`;
+      this.style.right = 'auto';
+      this.style.bottom = 'auto';
+    }
   }
 
   private handleDragEnd() {
     if (!this.isDragging) return;
     this.isDragging = false;
     this.cleanupDragListeners();
-    this.savePosition();
+
+    // Snap if released in a snap zone
+    if (this.snapIndicator === 'left') {
+      this.snapTo('snapped-left');
+    } else if (this.snapIndicator === 'right') {
+      this.snapTo('snapped-right');
+    } else {
+      this.savePosition();
+    }
+
+    this.snapIndicator = null;
   }
 
   private cleanupDragListeners() {
@@ -690,13 +879,69 @@ export class TrakletWidget extends LitElement {
     }
   }
 
+  // ============================================
+  // Resize handle (snapped mode only)
+  // ============================================
+
+  private handleResizeStart(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.isResizing = true;
+    this.resizeStartX = e.clientX;
+    this.resizeStartWidth = this.snappedWidth;
+
+    this.boundOnResizeMove = this.handleResizeMove.bind(this);
+    this.boundOnResizeEnd = this.handleResizeEnd.bind(this);
+    window.addEventListener('mousemove', this.boundOnResizeMove);
+    window.addEventListener('mouseup', this.boundOnResizeEnd);
+  }
+
+  private handleResizeMove(e: MouseEvent) {
+    if (!this.isResizing) return;
+
+    const maxWidth = window.innerWidth * TrakletWidget.MAX_SNAP_WIDTH_RATIO;
+    let newWidth: number;
+
+    if (this.panelMode === 'snapped-left') {
+      newWidth = this.resizeStartWidth + (e.clientX - this.resizeStartX);
+    } else {
+      newWidth = this.resizeStartWidth - (e.clientX - this.resizeStartX);
+    }
+
+    this.snappedWidth = Math.max(TrakletWidget.MIN_SNAP_WIDTH, Math.min(newWidth, maxWidth));
+  }
+
+  private handleResizeEnd() {
+    this.isResizing = false;
+    this.cleanupResizeListeners();
+    this.savePosition();
+  }
+
+  private cleanupResizeListeners() {
+    if (this.boundOnResizeMove) {
+      window.removeEventListener('mousemove', this.boundOnResizeMove);
+      this.boundOnResizeMove = null;
+    }
+    if (this.boundOnResizeEnd) {
+      window.removeEventListener('mouseup', this.boundOnResizeEnd);
+      this.boundOnResizeEnd = null;
+    }
+  }
+
+  // ============================================
+  // Position Persistence
+  // ============================================
+
   private savePosition() {
-    if (!this.hasAttribute('data-dragged')) return;
     try {
-      localStorage.setItem(
-        TrakletWidget.POSITION_STORAGE_KEY,
-        JSON.stringify({ left: this.style.left, top: this.style.top })
-      );
+      const data: Record<string, unknown> = {
+        mode: this.panelMode,
+        snappedWidth: this.snappedWidth,
+      };
+      if (this.panelMode === 'floating' && this.hasAttribute('data-dragged')) {
+        data['floating'] = { left: this.style.left, top: this.style.top };
+      }
+      localStorage.setItem(TrakletWidget.POSITION_STORAGE_KEY, JSON.stringify(data));
     } catch { /* localStorage unavailable */ }
   }
 
@@ -704,11 +949,28 @@ export class TrakletWidget extends LitElement {
     try {
       const stored = localStorage.getItem(TrakletWidget.POSITION_STORAGE_KEY);
       if (!stored) return;
-      const pos = JSON.parse(stored) as { left: string; top: string };
-      if (pos.left && pos.top) {
+      const data = JSON.parse(stored);
+
+      // Backward compat: old format was { left, top }
+      if (data.left && data.top && !data.mode) {
         this.setAttribute('data-dragged', '');
-        this.style.left = pos.left;
-        this.style.top = pos.top;
+        this.style.left = data.left;
+        this.style.top = data.top;
+        this.style.right = 'auto';
+        this.style.bottom = 'auto';
+        return;
+      }
+
+      if (data.snappedWidth) {
+        this.snappedWidth = data.snappedWidth;
+      }
+
+      if (data.mode === 'snapped-left' || data.mode === 'snapped-right') {
+        this.snapTo(data.mode);
+      } else if (data.mode === 'floating' && data.floating) {
+        this.setAttribute('data-dragged', '');
+        this.style.left = data.floating.left;
+        this.style.top = data.floating.top;
         this.style.right = 'auto';
         this.style.bottom = 'auto';
       }
@@ -717,7 +979,10 @@ export class TrakletWidget extends LitElement {
 
   /** Reset to default corner position */
   resetPosition() {
+    this.panelMode = 'floating';
+    this.snappedWidth = 400;
     this.removeAttribute('data-dragged');
+    this.removeAttribute('data-snap-mode');
     this.style.left = '';
     this.style.top = '';
     this.style.right = '';
