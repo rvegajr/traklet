@@ -1,6 +1,6 @@
 {
   "name": "traklet",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Drop-in issue tracking and test case management widget for any JavaScript application",
   "type": "module",
   "main": "dist/traklet.umd.js",
@@ -17,9 +17,6 @@
       "types": "./dist/lit/index.d.ts"
     }
   },
-  "bin": {
-    "traklet": "./dist/cli/traklet.js"
-  },
   "files": [
     "dist",
     ".traklet/settings.template.json",
@@ -30,12 +27,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/user/traklet.git"
+    "url": "https://github.com/rvegajr/traklet.git"
   },
   "bugs": {
-    "url": "https://github.com/user/traklet/issues"
+    "url": "https://github.com/rvegajr/traklet/issues"
   },
-  "homepage": "https://github.com/user/traklet#readme",
+  "homepage": "https://github.com/rvegajr/traklet#readme",
   "scripts": {
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
     "dev": "vite --port 8888",
