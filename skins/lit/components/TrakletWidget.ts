@@ -618,7 +618,7 @@ export class TrakletWidget extends LitElement {
         @dblclick=${this.handleHeaderDoubleClick}
       >
         <h2 class="panel__title">
-          ${this.viewState !== 'list'
+          ${this.viewState !== 'list' || this.showSettingsView || this.showRunsView
             ? html`
                 <button
                   class="btn-icon"
@@ -788,6 +788,14 @@ export class TrakletWidget extends LitElement {
   }
 
   private handleBack() {
+    if (this.showSettingsView) {
+      this.showSettingsView = false;
+      return;
+    }
+    if (this.showRunsView) {
+      this.showRunsView = false;
+      return;
+    }
     this.instance?.getWidgetPresenter()?.navigateTo('list');
   }
 
