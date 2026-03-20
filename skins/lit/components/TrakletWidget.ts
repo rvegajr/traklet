@@ -1234,20 +1234,33 @@ export class TrakletWidget extends LitElement {
   }
 
   private renderSettings() {
-    const isConnected = this.instance?.getWidgetPresenter()?.isConnected() ?? false;
     const savedToken = this.getSavedSetting('__traklet_pat__');
-    const savedEmail = this.getSavedSetting('__traklet_user_email__');
+    const savedIdentity = this.getSavedSetting('__traklet_user_identity__');
+    const identity = savedIdentity ? JSON.parse(savedIdentity) as { name: string; email: string } : null;
     const lbl = 'display: block; font-size: 11px; font-weight: 600; color: var(--traklet-text-secondary); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;';
     const fld = 'width: 100%; padding: 5px 8px; background: var(--traklet-bg); border-radius: var(--traklet-radius-md); border: 1px solid var(--traklet-border); color: var(--traklet-text); font-size: 12px; box-sizing: border-box;';
 
     return html`
       <div style="padding: var(--traklet-space-md); font-size: var(--traklet-font-size-sm);">
 
-        <!-- Status -->
-        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: var(--traklet-space-sm); padding: 5px 8px; background: ${isConnected ? 'rgba(22,163,74,0.06)' : 'rgba(220,38,38,0.06)'}; border: 1px solid ${isConnected ? 'rgba(22,163,74,0.2)' : 'rgba(220,38,38,0.2)'}; border-radius: var(--traklet-radius-md);">
-          <span style="width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: ${isConnected ? 'var(--traklet-success)' : 'var(--traklet-danger)'};"></span>
-          <span style="font-size: 12px; font-weight: 500;">${isConnected ? 'Connected' : 'Disconnected'}${this.currentProject ? html` &middot; ${this.currentProject.name}` : nothing}</span>
-        </div>
+        <!-- Identity (auto-detected from token) -->
+        ${identity ? html`
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: var(--traklet-space-sm); padding: 8px; background: rgba(22,163,74,0.06); border: 1px solid rgba(22,163,74,0.2); border-radius: var(--traklet-radius-md);">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--traklet-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0;">
+              ${identity.name.charAt(0).toUpperCase()}
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 13px; font-weight: 600; color: var(--traklet-text);">${identity.name}</div>
+              <div style="font-size: 11px; color: var(--traklet-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${identity.email}</div>
+            </div>
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--traklet-success); flex-shrink: 0;"></span>
+          </div>
+        ` : html`
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: var(--traklet-space-sm); padding: 5px 8px; background: rgba(220,38,38,0.06); border: 1px solid rgba(220,38,38,0.2); border-radius: var(--traklet-radius-md);">
+            <span style="width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--traklet-danger);"></span>
+            <span style="font-size: 12px; font-weight: 500;">Not identified. Enter your PAT token below.</span>
+          </div>
+        `}
 
         <!-- Theme -->
         <div style="margin-bottom: var(--traklet-space-sm);">
@@ -1280,30 +1293,11 @@ export class TrakletWidget extends LitElement {
               @click=${() => this.toggleDarkMode()}
             >${this.isDarkMode ? html`&#9790;` : html`&#9788;`}</button>
           </div>
-          <div style="font-size: 10px; color: var(--traklet-text-muted); margin-top: 2px;">
-            ${THEMES.find((t) => t.name === this.currentThemeName)?.label ?? 'Ocean'}${this.isDarkMode ? ' (Dark)' : ''}. Persists across sessions.
-          </div>
-        </div>
-
-        <!-- Your Email -->
-        <div style="margin-bottom: var(--traklet-space-sm);">
-          <label style="${lbl}">Your Email</label>
-          <input
-            type="email"
-            placeholder="you@company.com"
-            data-testid="traklet-input-email"
-            .value=${savedEmail}
-            style="${fld}"
-            @change=${(e: Event) => this.saveSetting('__traklet_user_email__', (e.target as HTMLInputElement).value)}
-          />
-          <div style="font-size: 10px; color: var(--traklet-text-muted); margin-top: 2px;">
-            Used to filter issues assigned to you and to identify your test results. The list defaults to showing your issues first but you can always see everyone's.
-          </div>
         </div>
 
         <!-- PAT Token -->
         <div style="margin-bottom: var(--traklet-space-sm);">
-          <label style="${lbl}">PAT Token</label>
+          <label style="${lbl}">Your PAT Token</label>
           <input
             type="password"
             placeholder="Paste your Personal Access Token"
@@ -1313,26 +1307,18 @@ export class TrakletWidget extends LitElement {
             @change=${(e: Event) => this.saveSetting('__traklet_pat__', (e.target as HTMLInputElement).value)}
           />
           <div style="font-size: 10px; color: var(--traklet-text-muted); margin-top: 2px;">
-            ${savedToken
-              ? html`Saved in your browser's localStorage. <strong>You won't need to enter this again</strong> unless you clear browser data or switch browsers.`
-              : html`Your token is stored in <strong>localStorage</strong> and persists across browser refreshes. You only enter it once per browser.`}
+            Each tester uses their own token. The backend identifies you automatically from it — no need to enter your name or email. Token is saved per-browser.
           </div>
         </div>
 
-        <!-- Persistence info -->
+        <!-- Multi-user explanation -->
         <div style="padding: 6px 8px; background: rgba(9,105,218,0.05); border: 1px solid rgba(9,105,218,0.12); border-radius: var(--traklet-radius-md); font-size: 10px; color: var(--traklet-text-secondary); line-height: 1.5; margin-bottom: var(--traklet-space-sm);">
-          <strong>No re-entry needed.</strong> Your email and token are saved in this browser's localStorage. They survive page refreshes, tab closes, and browser restarts. Only clearing site data or switching to a different browser/device will require re-entry.
+          <strong>Multi-user:</strong> On shared servers, each tester's PAT token identifies them uniquely. Issues are filtered to your assignments by default, but you can see everyone's tests. Your identity persists in this browser even after cache clears.
         </div>
 
-        <!-- File-based persistence -->
-        <div style="padding: 6px 8px; background: rgba(26,127,55,0.05); border: 1px solid rgba(26,127,55,0.15); border-radius: var(--traklet-radius-md); font-size: 10px; color: var(--traklet-text-secondary); line-height: 1.5; margin-bottom: var(--traklet-space-sm);">
-          <strong>Survives cache clears:</strong> Add your settings to <code style="font-size: 10px; background: var(--traklet-bg-secondary); padding: 1px 4px; border-radius: 3px;">.traklet/settings.json</code> in your project root. This file lives on disk, not in the browser. Copy <code style="font-size: 10px; background: var(--traklet-bg-secondary); padding: 1px 4px; border-radius: 3px;">settings.template.json</code> to <code style="font-size: 10px; background: var(--traklet-bg-secondary); padding: 1px 4px; border-radius: 3px;">settings.json</code> and fill in your values.
-        </div>
-
-        <!-- Code setup -->
+        <!-- Developer setup -->
         <div style="padding: 6px 8px; background: var(--traklet-bg-secondary); border: 1px solid var(--traklet-border-muted); border-radius: var(--traklet-radius-md); font-size: 10px; color: var(--traklet-text-secondary); line-height: 1.5;">
-          <strong>In code:</strong>
-          <code style="font-size: 10px; background: var(--traklet-bg); padding: 1px 4px; border-radius: 3px;">Traklet.init({ token: 'PAT', user: { email: '...' }, ... })</code>
+          <strong>Developers:</strong> Set token in code or <code style="font-size: 10px; background: var(--traklet-bg); padding: 1px 4px; border-radius: 3px;">.traklet/settings.json</code>
         </div>
       </div>
     `;
