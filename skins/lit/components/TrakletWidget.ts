@@ -62,6 +62,27 @@ const THEMES: readonly ThemePreset[] = [
     vars: { '--traklet-primary': '#0d9488', '--traklet-primary-hover': '#0f766e' },
   },
   {
+    name: 'pink',
+    label: 'Pink',
+    swatch: '#ec4899',
+    headerGradient: 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
+    vars: { '--traklet-primary': '#ec4899', '--traklet-primary-hover': '#db2777' },
+  },
+  {
+    name: 'orange',
+    label: 'Orange',
+    swatch: '#f97316',
+    headerGradient: 'linear-gradient(135deg, #f97316 0%, #f59e0b 100%)',
+    vars: { '--traklet-primary': '#f97316', '--traklet-primary-hover': '#ea580c' },
+  },
+  {
+    name: 'lime',
+    label: 'Lime',
+    swatch: '#84cc16',
+    headerGradient: 'linear-gradient(135deg, #84cc16 0%, #22c55e 100%)',
+    vars: { '--traklet-primary': '#65a30d', '--traklet-primary-hover': '#4d7c0f' },
+  },
+  {
     name: 'slate',
     label: 'Slate',
     swatch: '#475569',
