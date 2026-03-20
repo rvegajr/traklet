@@ -1,7 +1,7 @@
 {
   "name": "traklet",
-  "version": "0.1.0-alpha.1",
-  "description": "Backend-agnostic issue tracking widget for any JavaScript application",
+  "version": "0.1.0",
+  "description": "Drop-in issue tracking and test case management widget for any JavaScript application",
   "type": "module",
   "main": "dist/traklet.umd.js",
   "module": "dist/traklet.es.js",
@@ -21,8 +21,13 @@
     "traklet": "./dist/cli/traklet.js"
   },
   "files": [
-    "dist"
+    "dist",
+    ".traklet/settings.template.json",
+    ".traklet/config.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/user/traklet.git"
