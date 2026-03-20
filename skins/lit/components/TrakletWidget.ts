@@ -23,6 +23,85 @@ import './TrakletIssueForm';
 
 type PanelMode = 'floating' | 'snapped-left' | 'snapped-right';
 
+interface ThemePreset {
+  readonly name: string;
+  readonly label: string;
+  readonly swatch: string; // preview color for the picker
+  readonly vars: Record<string, string>;
+  readonly headerGradient: string;
+}
+
+const THEMES: readonly ThemePreset[] = [
+  {
+    name: 'ocean',
+    label: 'Ocean',
+    swatch: '#0969da',
+    headerGradient: 'linear-gradient(135deg, #0969da 0%, #1a7f37 100%)',
+    vars: {
+      '--traklet-primary': '#0969da',
+      '--traklet-primary-hover': '#0860ca',
+    },
+  },
+  {
+    name: 'purple',
+    label: 'Purple',
+    swatch: '#7c3aed',
+    headerGradient: 'linear-gradient(135deg, #7c3aed 0%, #db2777 100%)',
+    vars: {
+      '--traklet-primary': '#7c3aed',
+      '--traklet-primary-hover': '#6d28d9',
+    },
+  },
+  {
+    name: 'sunset',
+    label: 'Sunset',
+    swatch: '#ea580c',
+    headerGradient: 'linear-gradient(135deg, #ea580c 0%, #dc2626 100%)',
+    vars: {
+      '--traklet-primary': '#ea580c',
+      '--traklet-primary-hover': '#c2410c',
+    },
+  },
+  {
+    name: 'teal',
+    label: 'Teal',
+    swatch: '#0d9488',
+    headerGradient: 'linear-gradient(135deg, #0d9488 0%, #0369a1 100%)',
+    vars: {
+      '--traklet-primary': '#0d9488',
+      '--traklet-primary-hover': '#0f766e',
+    },
+  },
+  {
+    name: 'slate',
+    label: 'Slate',
+    swatch: '#475569',
+    headerGradient: 'linear-gradient(135deg, #475569 0%, #1e293b 100%)',
+    vars: {
+      '--traklet-primary': '#475569',
+      '--traklet-primary-hover': '#334155',
+    },
+  },
+  {
+    name: 'dark',
+    label: 'Dark',
+    swatch: '#1e1e2e',
+    headerGradient: 'linear-gradient(135deg, #1e1e2e 0%, #313244 100%)',
+    vars: {
+      '--traklet-primary': '#89b4fa',
+      '--traklet-primary-hover': '#74c7ec',
+      '--traklet-bg': '#1e1e2e',
+      '--traklet-bg-secondary': '#181825',
+      '--traklet-bg-hover': '#313244',
+      '--traklet-text': '#cdd6f4',
+      '--traklet-text-secondary': '#a6adc8',
+      '--traklet-text-muted': '#6c7086',
+      '--traklet-border': '#45475a',
+      '--traklet-border-muted': '#313244',
+    },
+  },
+] as const;
+
 @customElement('traklet-widget')
 export class TrakletWidget extends LitElement {
   static override styles = [
@@ -254,7 +333,7 @@ export class TrakletWidget extends LitElement {
         justify-content: space-between;
         padding: 6px var(--traklet-space-md);
         border-bottom: none;
-        background: linear-gradient(135deg, #0969da 0%, #1a7f37 100%);
+        background: var(--traklet-header-gradient, linear-gradient(135deg, #0969da 0%, #1a7f37 100%));
         color: white;
         cursor: grab;
         user-select: none;
@@ -449,6 +528,7 @@ export class TrakletWidget extends LitElement {
   @state() declare private snapIndicator: 'left' | 'right' | null;
   @state() declare private showRunsView: boolean;
   @state() declare private showSettingsView: boolean;
+  @state() declare private currentThemeName: string;
 
   constructor() {
     super();
@@ -466,6 +546,7 @@ export class TrakletWidget extends LitElement {
     this.snapIndicator = null;
     this.showRunsView = false;
     this.showSettingsView = false;
+    this.currentThemeName = this.getSavedSetting('__traklet_theme__') || 'ocean';
   }
 
   private unsubscribeViewState?: () => void;
@@ -498,6 +579,7 @@ export class TrakletWidget extends LitElement {
     super.connectedCallback();
     this.updateFromInstance();
     this.restorePosition();
+    this.applyTheme(this.currentThemeName);
   }
 
   override disconnectedCallback(): void {
@@ -1156,6 +1238,29 @@ export class TrakletWidget extends LitElement {
           <span style="font-size: 12px; font-weight: 500;">${isConnected ? 'Connected' : 'Disconnected'}${this.currentProject ? html` &middot; ${this.currentProject.name}` : nothing}</span>
         </div>
 
+        <!-- Theme -->
+        <div style="margin-bottom: var(--traklet-space-sm);">
+          <label style="${lbl}">Theme</label>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            ${THEMES.map((theme) => html`
+              <button
+                title="${theme.label}"
+                data-testid="traklet-theme-${theme.name}"
+                style="
+                  width: 28px; height: 28px; border-radius: 50%; border: 2px solid ${this.currentThemeName === theme.name ? 'var(--traklet-text)' : 'transparent'};
+                  background: ${theme.headerGradient}; cursor: pointer; padding: 0;
+                  box-shadow: ${this.currentThemeName === theme.name ? '0 0 0 2px var(--traklet-bg), 0 0 0 4px var(--traklet-text)' : 'none'};
+                  transition: transform 150ms ease;
+                "
+                @click=${() => this.applyTheme(theme.name)}
+              ></button>
+            `)}
+          </div>
+          <div style="font-size: 10px; color: var(--traklet-text-muted); margin-top: 2px;">
+            ${THEMES.find((t) => t.name === this.currentThemeName)?.label ?? 'Ocean'} theme. Persists across sessions.
+          </div>
+        </div>
+
         <!-- Your Email -->
         <div style="margin-bottom: var(--traklet-space-sm);">
           <label style="${lbl}">Your Email</label>
@@ -1207,6 +1312,26 @@ export class TrakletWidget extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  private applyTheme(themeName: string): void {
+    const theme = THEMES.find((t) => t.name === themeName) ?? THEMES[0]!;
+    this.currentThemeName = theme.name;
+
+    // Apply CSS custom properties to the host element
+    this.style.setProperty('--traklet-header-gradient', theme.headerGradient);
+    for (const [key, value] of Object.entries(theme.vars)) {
+      this.style.setProperty(key, value);
+    }
+
+    // Update anchor icon color to match theme
+    const anchor = this.shadowRoot?.querySelector('.anchor') as HTMLElement | null;
+    if (anchor) {
+      anchor.style.background = theme.swatch;
+    }
+
+    // Persist
+    this.saveSetting('__traklet_theme__', theme.name);
   }
 
   private getSavedSetting(key: string): string {
