@@ -187,7 +187,10 @@ export class TrakletWidget extends LitElement {
         max-height: calc(100vh - 40px);
         background: var(--traklet-bg);
         border-radius: var(--traklet-radius-lg);
-        box-shadow: var(--traklet-shadow-lg);
+        box-shadow:
+          0 0 0 2px var(--traklet-primary),
+          0 8px 32px rgba(9, 105, 218, 0.18),
+          0 2px 8px rgba(0, 0, 0, 0.12);
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -225,31 +228,34 @@ export class TrakletWidget extends LitElement {
         height: 100vh;
         max-height: 100vh;
         border-radius: 0;
-        box-shadow: 2px 0 12px rgba(0, 0, 0, 0.1);
         transition: width 200ms ease;
       }
 
       :host([data-snap-mode='snapped-left']) .panel {
         transform-origin: top left;
+        box-shadow: none;
+        border-right: 3px solid var(--traklet-primary);
       }
 
       :host([data-snap-mode='snapped-right']) .panel {
         transform-origin: top right;
-        box-shadow: -2px 0 12px rgba(0, 0, 0, 0.1);
+        box-shadow: none;
+        border-left: 3px solid var(--traklet-primary);
       }
 
       :host([data-snap-mode]) .panel__body {
         max-height: none;
       }
 
-      /* ========== Header (drag handle) ========== */
+      /* ========== Header (drag handle + gradient) ========== */
       .panel__header {
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: 10px var(--traklet-space-md);
-        border-bottom: 1px solid var(--traklet-border-muted);
-        background: var(--traklet-bg-secondary);
+        border-bottom: none;
+        background: linear-gradient(135deg, #0969da 0%, #1a7f37 100%);
+        color: white;
         cursor: grab;
         user-select: none;
         -webkit-user-select: none;
@@ -266,6 +272,7 @@ export class TrakletWidget extends LitElement {
         margin: 0;
         font-size: var(--traklet-font-size-sm);
         font-weight: 600;
+        color: white;
       }
 
       .panel__actions {
@@ -287,7 +294,7 @@ export class TrakletWidget extends LitElement {
         align-items: center;
         justify-content: space-between;
         padding: 6px var(--traklet-space-md);
-        border-top: 1px solid var(--traklet-border-muted);
+        border-top: 2px solid var(--traklet-primary);
         background: var(--traklet-bg-secondary);
         font-size: var(--traklet-font-size-xs);
         color: var(--traklet-text-muted);
@@ -395,13 +402,23 @@ export class TrakletWidget extends LitElement {
         justify-content: center;
         background: none;
         border: none;
-        color: var(--traklet-text-secondary);
+        color: rgba(255, 255, 255, 0.85);
         cursor: pointer;
         transition: background var(--traklet-transition-fast), color var(--traklet-transition-fast);
         padding: 0;
       }
 
       .btn-icon:hover {
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+      }
+
+      /* Non-header icon buttons (detail view, etc.) use normal colors */
+      .panel__body .btn-icon {
+        color: var(--traklet-text-secondary);
+      }
+
+      .panel__body .btn-icon:hover {
         background: var(--traklet-bg-hover);
         color: var(--traklet-text);
       }
