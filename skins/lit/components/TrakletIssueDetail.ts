@@ -18,6 +18,8 @@ import { baseStyles, buttonStyles, formStyles, labelStyles, layoutStyles } from 
 import type { IIssueDetailPresenter, IssueDetailViewModel, CommentViewModel } from '@/presenters';
 import { parseTestCaseBody, addJamLink, updateSection, addDiagnostics } from '@/core/TestCaseTemplate';
 import type { ParsedTestCase, TestCaseSection } from '@/core/TestCaseTemplate';
+import { getTestRunManager } from '@/core/TestRunManager';
+import type { TestStatus } from '@/core/TestRunManager';
 
 @customElement('traklet-issue-detail')
 export class TrakletIssueDetail extends LitElement {
@@ -425,6 +427,45 @@ export class TrakletIssueDetail extends LitElement {
         border-color: var(--traklet-primary);
       }
 
+      /* Test run status buttons */
+      .test-status-bar {
+        display: flex;
+        gap: var(--traklet-space-xs);
+        padding: var(--traklet-space-sm) var(--traklet-space-md);
+        background: var(--traklet-bg-secondary);
+        border-bottom: 1px solid var(--traklet-border-muted);
+        align-items: center;
+      }
+
+      .test-status-bar__label {
+        font-size: var(--traklet-font-size-xs);
+        color: var(--traklet-text-muted);
+        margin-right: auto;
+      }
+
+      .test-status-btn {
+        padding: 4px 12px;
+        font-size: var(--traklet-font-size-xs);
+        font-weight: 600;
+        border: 1px solid;
+        border-radius: var(--traklet-radius-full);
+        cursor: pointer;
+        background: var(--traklet-bg);
+        transition: all var(--traklet-transition-fast);
+      }
+
+      .test-status-btn--pass { border-color: #16a34a; color: #16a34a; }
+      .test-status-btn--pass:hover, .test-status-btn--pass.active { background: #16a34a; color: white; }
+
+      .test-status-btn--fail { border-color: #dc2626; color: #dc2626; }
+      .test-status-btn--fail:hover, .test-status-btn--fail.active { background: #dc2626; color: white; }
+
+      .test-status-btn--blocked { border-color: #d97706; color: #d97706; }
+      .test-status-btn--blocked:hover, .test-status-btn--blocked.active { background: #d97706; color: white; }
+
+      .test-status-btn--skip { border-color: #6b7280; color: #6b7280; }
+      .test-status-btn--skip:hover, .test-status-btn--skip.active { background: #6b7280; color: white; }
+
       .comment-edit-input {
         width: 100%;
         padding: var(--traklet-space-sm);
@@ -544,6 +585,7 @@ export class TrakletIssueDetail extends LitElement {
 
     return html`
       ${this.renderHeader()}
+      ${this.renderTestStatusBar()}
       ${this.parsedBody?.isTestCase ? this.renderTestCase() : this.renderRegularIssue()}
       ${this.renderComments()}
       ${this.showDeleteConfirm ? this.renderDeleteConfirm() : nothing}
@@ -870,6 +912,55 @@ export class TrakletIssueDetail extends LitElement {
           : nothing}
       </div>
     `;
+  }
+
+  // ============================================
+  // Test Run Status Bar
+  // ============================================
+
+  private renderTestStatusBar() {
+    const runManager = getTestRunManager();
+    if (!runManager.isRunActive() || !this.viewModel) return nothing;
+
+    const currentStatus = runManager.getStatusForIssue(this.viewModel.id);
+
+    return html`
+      <div class="test-status-bar" data-testid="traklet-test-status-bar">
+        <span class="test-status-bar__label">Mark result:</span>
+        <button
+          class="test-status-btn test-status-btn--pass ${currentStatus === 'passed' ? 'active' : ''}"
+          data-testid="traklet-btn-status-pass"
+          @click=${() => this.handleSetTestStatus('passed')}
+        >Pass</button>
+        <button
+          class="test-status-btn test-status-btn--fail ${currentStatus === 'failed' ? 'active' : ''}"
+          data-testid="traklet-btn-status-fail"
+          @click=${() => this.handleSetTestStatus('failed')}
+        >Fail</button>
+        <button
+          class="test-status-btn test-status-btn--blocked ${currentStatus === 'blocked' ? 'active' : ''}"
+          data-testid="traklet-btn-status-blocked"
+          @click=${() => this.handleSetTestStatus('blocked')}
+        >Blocked</button>
+        <button
+          class="test-status-btn test-status-btn--skip ${currentStatus === 'skipped' ? 'active' : ''}"
+          data-testid="traklet-btn-status-skip"
+          @click=${() => this.handleSetTestStatus('skipped')}
+        >Skip</button>
+      </div>
+    `;
+  }
+
+  private handleSetTestStatus(status: TestStatus) {
+    if (!this.viewModel) return;
+    const runManager = getTestRunManager();
+    runManager.recordResult(
+      this.viewModel.id,
+      this.viewModel.title,
+      status,
+      { executedBy: this.viewModel.author.name }
+    );
+    this.requestUpdate(); // Re-render to update active state
   }
 
   // ============================================

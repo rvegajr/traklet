@@ -94,6 +94,19 @@ export type {
   SyncResult,
 } from './OperationQueue';
 
+// Test Run Manager
+export {
+  TestRunManager,
+  getTestRunManager,
+  resetTestRunManager,
+} from './TestRunManager';
+export type {
+  TestRun,
+  TestCaseResult,
+  TestStatus,
+  TestRunSummary,
+} from './TestRunManager';
+
 // Test Case Template
 export {
   parseTestCaseBody,

@@ -18,6 +18,7 @@ import type { Project } from '../../../src/models';
 import { getEventBus } from '../../../src/core';
 import './TrakletIssueList';
 import './TrakletIssueDetail';
+import './TrakletTestRunView';
 import './TrakletIssueForm';
 
 type PanelMode = 'floating' | 'snapped-left' | 'snapped-right';
@@ -424,6 +425,7 @@ export class TrakletWidget extends LitElement {
   @state() declare private snappedWidth: number;
   @state() declare private isResizing: boolean;
   @state() declare private snapIndicator: 'left' | 'right' | null;
+  @state() declare private showRunsView: boolean;
 
   constructor() {
     super();
@@ -439,6 +441,7 @@ export class TrakletWidget extends LitElement {
     this.snappedWidth = 400;
     this.isResizing = false;
     this.snapIndicator = null;
+    this.showRunsView = false;
   }
 
   private unsubscribeViewState?: () => void;
@@ -608,6 +611,16 @@ export class TrakletWidget extends LitElement {
         <div class="panel__actions">
           <button
             class="btn-icon"
+            data-testid="traklet-btn-runs"
+            aria-label="${this.showRunsView ? 'Issues' : 'Test Runs'}"
+            title="${this.showRunsView ? 'Back to Issues' : 'Test Runs'}"
+            @click=${() => { this.showRunsView = !this.showRunsView; }}
+            style="${this.showRunsView ? 'color: var(--traklet-primary);' : ''}"
+          >
+            ${this.renderRunsIcon()}
+          </button>
+          <button
+            class="btn-icon"
             data-testid="traklet-btn-refresh"
             aria-label="Refresh"
             @click=${this.handleRefresh}
@@ -628,6 +641,10 @@ export class TrakletWidget extends LitElement {
   }
 
   private renderBody() {
+    if (this.showRunsView) {
+      return html`<traklet-test-run-view></traklet-test-run-view>`;
+    }
+
     switch (this.viewState) {
       case 'list':
         return html`
@@ -693,6 +710,7 @@ export class TrakletWidget extends LitElement {
   }
 
   private getTitle(): string {
+    if (this.showRunsView) return 'Test Runs';
     switch (this.viewState) {
       case 'list': return 'Issues';
       case 'detail': return 'Details';
@@ -1065,6 +1083,15 @@ export class TrakletWidget extends LitElement {
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="23 4 23 10 17 10"/>
         <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+    `;
+  }
+
+  private renderRunsIcon() {
+    return html`
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 11l3 3L22 4"/>
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
       </svg>
     `;
   }
