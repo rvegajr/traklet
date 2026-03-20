@@ -21,6 +21,7 @@ import {
 } from './core';
 import type { TrakletConfig, DiagnosticData, RecordingSession } from './core';
 import { LocalStorageAdapter, AzureDevOpsAdapter, RestAdapter, GitHubAdapter } from './adapters';
+import { saveUserIdentity, recallUserIdentity } from './core/UserIdentityStore';
 import { IssueListPresenter, IssueDetailPresenter, IssueFormPresenter } from './presenters';
 import type { IWidgetPresenter } from './presenters';
 
@@ -142,6 +143,31 @@ export class Traklet {
     const connectionResult = await adapter.connect(adapterConfig);
     if (!connectionResult.success) {
       throw new Error(`Failed to connect: ${connectionResult.error ?? 'Unknown error'}`);
+    }
+
+    // Auto-detect or recall user identity
+    let resolvedUser = config.user;
+
+    if (connectionResult.authenticatedUser) {
+      // Backend told us who the user is — save for future sessions
+      await saveUserIdentity(connectionResult.authenticatedUser, config.adapter);
+      if (!resolvedUser) {
+        resolvedUser = {
+          email: connectionResult.authenticatedUser.email,
+          name: connectionResult.authenticatedUser.name,
+        };
+      }
+    } else if (!resolvedUser) {
+      // No user configured and backend didn't identify — recall from previous session
+      const recalled = await recallUserIdentity();
+      if (recalled) {
+        resolvedUser = { email: recalled.email, name: recalled.name };
+      }
+    }
+
+    // Update config manager with resolved user
+    if (resolvedUser && !config.user) {
+      configManager.setConfig({ ...config, user: resolvedUser });
     }
 
     // Initialize state

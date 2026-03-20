@@ -48,6 +48,13 @@ export interface ConnectionResult {
   readonly success: boolean;
   readonly error?: string | undefined;
   readonly projects?: readonly Project[] | undefined;
+  /** The authenticated user identity (auto-detected from the backend) */
+  readonly authenticatedUser?: {
+    readonly email: string;
+    readonly name: string;
+    readonly id?: string | undefined;
+    readonly avatarUrl?: string | undefined;
+  } | undefined;
 }
 
 /**

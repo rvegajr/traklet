@@ -101,9 +101,18 @@ const MOCK_WORK_ITEM_TYPE = {
   ],
 };
 
+const MOCK_CONNECTION_DATA = {
+  authenticatedUser: {
+    id: 'user-guid',
+    providerDisplayName: 'Test User',
+    properties: { Account: { '$value': 'test@example.com' } },
+  },
+};
+
 function setupConnectMock(): void {
   mockFetch.mockResolvedValueOnce(jsonResponse(MOCK_PROJECT));
   mockFetch.mockResolvedValueOnce(jsonResponse(MOCK_WORK_ITEM_TYPE));
+  mockFetch.mockResolvedValueOnce(jsonResponse(MOCK_CONNECTION_DATA));
 }
 
 describe('AzureDevOpsAdapter', () => {
@@ -234,7 +243,7 @@ describe('AzureDevOpsAdapter', () => {
 
       await adapter.getIssues('test-project', { state: 'open' });
 
-      const wiqlCall = mockFetch.mock.calls[2]!;
+      const wiqlCall = mockFetch.mock.calls[3]!;
       const body = JSON.parse(wiqlCall[1]?.body as string);
       expect(body.query).toContain(`[System.State] <> 'Closed'`);
     });
@@ -246,7 +255,7 @@ describe('AzureDevOpsAdapter', () => {
 
       await adapter.getIssues('test-project', { labels: ['bug', 'test-case'] });
 
-      const wiqlCall = mockFetch.mock.calls[2]!;
+      const wiqlCall = mockFetch.mock.calls[3]!;
       const body = JSON.parse(wiqlCall[1]?.body as string);
       expect(body.query).toContain(`[System.Tags] Contains 'bug'`);
       expect(body.query).toContain(`[System.Tags] Contains 'test-case'`);
@@ -341,7 +350,7 @@ describe('AzureDevOpsAdapter', () => {
 
       expect(issue.id).toBe('1');
 
-      const createCall = mockFetch.mock.calls[2]!;
+      const createCall = mockFetch.mock.calls[3]!;
       expect(createCall[1]?.method).toBe('POST');
       expect(createCall[1]?.headers?.['Content-Type']).toBe('application/json-patch+json');
 
@@ -371,7 +380,7 @@ describe('AzureDevOpsAdapter', () => {
         body: 'Just title and body',
       });
 
-      const patchOps = JSON.parse(mockFetch.mock.calls[2]![1]?.body as string);
+      const patchOps = JSON.parse(mockFetch.mock.calls[3]![1]?.body as string);
       expect(patchOps).toHaveLength(2); // Only title and description
     });
   });
@@ -393,7 +402,7 @@ describe('AzureDevOpsAdapter', () => {
         state: 'closed',
       });
 
-      const patchOps = JSON.parse(mockFetch.mock.calls[2]![1]?.body as string);
+      const patchOps = JSON.parse(mockFetch.mock.calls[3]![1]?.body as string);
       expect(patchOps).toContainEqual({
         op: 'replace',
         path: '/fields/System.Title',
@@ -426,7 +435,7 @@ describe('AzureDevOpsAdapter', () => {
 
       await adapter.deleteIssue('test-project', '1');
 
-      const deleteCall = mockFetch.mock.calls[2]!;
+      const deleteCall = mockFetch.mock.calls[3]!;
       expect(deleteCall[1]?.method).toBe('DELETE');
       expect(deleteCall[0]).toContain('/workitems/1');
     });
@@ -475,7 +484,7 @@ describe('AzureDevOpsAdapter', () => {
       });
 
       expect(comment.id).toBe('42');
-      const addCall = mockFetch.mock.calls[2]!;
+      const addCall = mockFetch.mock.calls[3]!;
       expect(addCall[1]?.method).toBe('POST');
       expect(JSON.parse(addCall[1]?.body as string)).toEqual({ text: 'New comment' });
     });
@@ -490,7 +499,7 @@ describe('AzureDevOpsAdapter', () => {
       });
 
       expect(comment.body).toBe('Updated comment');
-      const updateCall = mockFetch.mock.calls[2]!;
+      const updateCall = mockFetch.mock.calls[3]!;
       expect(updateCall[1]?.method).toBe('PATCH');
     });
 
@@ -499,7 +508,7 @@ describe('AzureDevOpsAdapter', () => {
 
       await adapter.deleteComment('test-project', '1', '42');
 
-      const deleteCall = mockFetch.mock.calls[2]!;
+      const deleteCall = mockFetch.mock.calls[3]!;
       expect(deleteCall[1]?.method).toBe('DELETE');
       expect(deleteCall[0]).toContain('/comments/42');
     });

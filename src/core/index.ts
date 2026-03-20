@@ -94,6 +94,13 @@ export type {
   SyncResult,
 } from './OperationQueue';
 
+// User Identity Store
+export {
+  saveUserIdentity,
+  recallUserIdentity,
+  clearUserIdentity,
+} from './UserIdentityStore';
+
 // Test Run Manager
 export {
   TestRunManager,

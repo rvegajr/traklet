@@ -228,7 +228,28 @@ export class AzureDevOpsAdapter
       }
     }
 
-    return { success: true, projects };
+    // Auto-detect authenticated user from the token
+    let authenticatedUser: ConnectionResult['authenticatedUser'];
+    try {
+      const connData = await this.fetchAdo<{
+        authenticatedUser: {
+          id: string;
+          providerDisplayName: string;
+          properties: { Account?: { $value?: string } };
+        };
+      }>('/_apis/connectionData', token);
+
+      const adoUser = connData.authenticatedUser;
+      authenticatedUser = {
+        id: adoUser.id,
+        name: adoUser.providerDisplayName,
+        email: adoUser.properties?.Account?.['$value'] ?? adoUser.providerDisplayName,
+      };
+    } catch {
+      // Non-critical: user identity is optional
+    }
+
+    return { success: true, projects, authenticatedUser };
   }
 
   protected async doDisconnect(): Promise<void> {
