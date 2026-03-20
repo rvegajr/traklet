@@ -77,7 +77,11 @@ describe('IssueFormPresenter', () => {
       await presenter.initCreate();
 
       const vm = presenter.getViewModel();
-      expect(vm.issue).toBeUndefined();
+      // initCreate now exposes empty formData in viewModel.issue for UI bindings
+      expect(vm.issue).toBeDefined();
+      expect(vm.issue?.title).toBe('');
+      expect(vm.issue?.body).toBe('');
+      expect(vm.issue?.labels).toEqual([]);
       expect(vm.isSubmitting).toBe(false);
       expect(vm.errors).toEqual({});
     });

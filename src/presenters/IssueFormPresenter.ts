@@ -50,7 +50,10 @@ export class IssueFormPresenter implements IIssueFormPresenter {
 
     this.updateViewModel({
       isEditing: false,
-      issue: undefined,
+      issue: {
+        id: '',
+        ...this.formData,
+      },
       availableLabels: labels,
       isSubmitting: false,
       errors: {},
@@ -117,28 +120,19 @@ export class IssueFormPresenter implements IIssueFormPresenter {
         break;
     }
 
+    // Always expose formData in viewModel so UI bindings work in both create and edit modes
+    const issueData = {
+      id: this.currentIssue?.id ?? '',
+      ...this.formData,
+    };
+
     // Clear error for updated field
     if (this.viewModel.errors[field]) {
       const newErrors = { ...this.viewModel.errors };
       delete newErrors[field];
-      this.updateViewModel({
-        issue: this.viewModel.isEditing
-          ? {
-              id: this.currentIssue?.id ?? '',
-              ...this.formData,
-            }
-          : undefined,
-        errors: newErrors,
-      });
+      this.updateViewModel({ issue: issueData, errors: newErrors });
     } else {
-      this.updateViewModel({
-        issue: this.viewModel.isEditing
-          ? {
-              id: this.currentIssue?.id ?? '',
-              ...this.formData,
-            }
-          : undefined,
-      });
+      this.updateViewModel({ issue: issueData });
     }
   }
 

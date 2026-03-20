@@ -396,7 +396,15 @@ export class TrakletIssueList extends LitElement {
   }
 
   private handleCreate() {
-    this.presenter?.createIssue();
+    // Dispatch navigate event so widget's navigateTo('create') is called,
+    // which initializes the form presenter (loads labels, resets form data)
+    this.dispatchEvent(
+      new CustomEvent('navigate', {
+        detail: { view: 'create' },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 
   private handleSelect(issueId: string) {

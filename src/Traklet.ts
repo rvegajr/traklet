@@ -385,9 +385,16 @@ export class Traklet {
         return new AzureDevOpsAdapter();
 
       case 'github':
+        throw new Error(
+          `GitHub adapter is not yet available. Use 'azure-devops' or 'localStorage' instead. ` +
+          `GitHub Issues support is planned for a future release.`
+        );
+
       case 'rest':
-        // TODO: Implement these adapters
-        throw new Error(`Adapter '${config.adapter}' is not yet implemented`);
+        throw new Error(
+          `REST adapter is not yet available. Use 'azure-devops' or 'localStorage' instead. ` +
+          `Generic REST API support is planned for a future release.`
+        );
 
       default:
         throw new Error(`Unknown adapter type: ${config.adapter}`);

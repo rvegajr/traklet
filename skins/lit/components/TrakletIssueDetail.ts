@@ -984,8 +984,14 @@ export class TrakletIssueDetail extends LitElement {
   // ============================================
 
   private async handleConfirmDelete() {
-    await this.presenter?.deleteIssue();
-    this.showDeleteConfirm = false;
+    try {
+      await this.presenter?.deleteIssue();
+      this.showDeleteConfirm = false;
+      // deleteIssue calls goBack() internally which navigates to list
+    } catch (e) {
+      this.showDeleteConfirm = false;
+      this.error = e instanceof Error ? e.message : 'Failed to delete issue';
+    }
   }
 
   private async handleAddComment() {
@@ -1087,11 +1093,19 @@ export class TrakletIssueDetail extends LitElement {
   }
 
   private async handleCloseIssue() {
-    await this.presenter?.closeIssue();
+    try {
+      await this.presenter?.closeIssue();
+    } catch (e) {
+      this.error = e instanceof Error ? e.message : 'Failed to close issue';
+    }
   }
 
   private async handleReopenIssue() {
-    await this.presenter?.reopenIssue();
+    try {
+      await this.presenter?.reopenIssue();
+    } catch (e) {
+      this.error = e instanceof Error ? e.message : 'Failed to reopen issue';
+    }
   }
 
   private handleEdit() {
