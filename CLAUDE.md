@@ -145,16 +145,24 @@ interface TrakletUser {
 ```
 
 ### Token Management Rules:
-1. NEVER store tokens in localStorage by default
-2. REQUIRE `getToken` callback for dynamic token retrieval
-3. User identity is OPTIONAL but determines permissions
-4. SUPPORT token refresh via callback
+1. **NEVER hardcode tokens in source code** — use environment variables or `getToken` callback
+2. **NEVER commit `.traklet/settings.json`** — it is gitignored and protected by a pre-commit hook
+3. **NEVER include tokens in README examples** — always show `process.env.VARIABLE_NAME`
+4. User identity is OPTIONAL but determines permissions
+5. SUPPORT token refresh via callback
+6. For shared team access (UAT), use a service account token via env var; individual testers identify via the widget settings (name/email stored per-browser)
+
+**Enforcement:**
+- `.gitignore` excludes `.traklet/settings.json`
+- Pre-commit hook in `.githooks/pre-commit` blocks settings.json commits
+- Runtime console warning if token appears hardcoded in browser context
+- `npm install` auto-configures the git hook via `prepare` script
 
 **When auth code is needed:**
-1. REQUIRE token via config or callback
-2. User identity is OPTIONAL (anonymous mode if not provided)
-3. REJECT hardcoded credentials
-4. REFERENCE: src/core/AuthManager.ts, src/core/PermissionManager.ts
+1. REQUIRE token via env var, config callback, or widget settings UI
+2. User identity is OPTIONAL (auto-detected from backend or entered in settings gear)
+3. REJECT hardcoded credentials in any code review
+4. REFERENCE: src/core/AuthManager.ts, src/core/PermissionManager.ts, src/core/UserIdentityStore.ts
 
 ---
 

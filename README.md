@@ -1,394 +1,260 @@
 # Traklet
 
-> A backend-agnostic issue tracking widget for any JavaScript application
+> A backend-agnostic issue tracking and test case management widget that drops into any JavaScript application.
 
-[![npm version](https://img.shields.io/npm/v/traklet.svg)](https://www.npmjs.com/package/traklet)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
 
-- **Backend Agnostic** - Works with GitHub Issues, Azure DevOps, custom REST APIs, or localStorage
-- **Zero Style Conflicts** - Shadow DOM isolation ensures your app's styles don't leak in
-- **Offline Support** - Queue operations when offline, sync automatically when reconnected
-- **Type-Safe** - Full TypeScript support with exported types
-- **Permission System** - User-based permissions with email matching
-- **Themeable** - 50+ CSS custom properties for complete customization
-- **Tiny Bundle** - ~15KB gzipped core
-
-## Installation
-
-```bash
-npm install traklet
-```
+- **Drop-in Widget** - One line of code adds a floating issue tracker to any app
+- **Backend Agnostic** - Azure DevOps, GitHub Issues, generic REST APIs, or localStorage
+- **Test Case Management** - Structured test cases with sections, test runs, pass/fail tracking
+- **Zero Style Conflicts** - Shadow DOM isolation, no CSS leaks in or out
+- **Draggable & Snappable** - Float anywhere, snap to edges as a sidebar, resize
+- **Themeable** - 8 color themes + dark mode, all customizable
+- **Offline Support** - Queue operations when offline, sync on reconnect
+- **Jam.dev Integration** - Paste recording links directly into test evidence
+- **Screenshot Paste** - Ctrl+V images into any editable section
+- **CLI** - `npx traklet sync` seeds test cases from markdown files
 
 ## Quick Start
-
-### Basic Usage (localStorage adapter for development)
 
 ```typescript
 import { Traklet } from 'traklet';
 
-const traklet = await Traklet.init({
+await Traklet.init({
   adapter: 'localStorage',
-  projects: [
-    { id: 'my-project', name: 'My Project' }
-  ]
+  projects: [{ id: 'my-project', name: 'My Project' }],
 });
-
-// Open the widget
-traklet.open();
+// Widget appears. Done.
 ```
 
-### Using the Configuration Builder (Recommended)
+## Connecting to a Backend
 
-The configuration builder provides a wizard-like API that guides you through setup with full validation:
-
-```typescript
-import { TrakletBuilder } from 'traklet';
-
-const traklet = await TrakletBuilder
-  .create()
-  .useLocalStorage()                          // or .useGitHub(), .useAzureDevOps()
-  .addProject('my-project', 'My Project')
-  .withTheme({ primary: '#6366f1' })
-  .atPosition('bottom-right')
-  .build();
-
-traklet.open();
-```
-
-### GitHub Issues Backend
+### Azure DevOps
 
 ```typescript
-import { TrakletBuilder } from 'traklet';
-
-const traklet = await TrakletBuilder
-  .create()
-  .useGitHub({
-    token: 'ghp_your_token_here',
-    // Or use dynamic token retrieval:
-    // getToken: async () => fetchTokenFromYourAuth()
-  })
-  .addProject('owner/repo', 'My GitHub Repo')
-  .withUser({
-    id: 'user-123',
-    email: 'user@example.com',
-    displayName: 'John Doe'
-  })
-  .withPermissions({
-    canCreate: true,
-    canEditOwn: true,
-    canDeleteOwn: true
-  })
-  .build();
-```
-
-### Azure DevOps Backend
-
-```typescript
-import { TrakletBuilder } from 'traklet';
-
-const traklet = await TrakletBuilder
-  .create()
-  .useAzureDevOps({
-    organization: 'my-org',
-    token: 'your-pat-token'
-  })
-  .addProject('my-project', 'My Azure Project')
-  .build();
-```
-
-### Custom REST API Backend
-
-```typescript
-import { TrakletBuilder } from 'traklet';
-
-const traklet = await TrakletBuilder
-  .create()
-  .useRest({
-    baseUrl: 'https://api.example.com/issues',
-    headers: {
-      'Authorization': 'Bearer your-token'
-    }
-  })
-  .addProject('project-1', 'Project One')
-  .build();
-```
-
-## Configuration Options
-
-### Full Configuration Object
-
-```typescript
-interface TrakletConfig {
-  // Required: Backend adapter type
-  adapter: 'github' | 'azure-devops' | 'rest' | 'localStorage';
-
-  // Required: Projects to manage
-  projects: Array<{
-    id: string;
-    name: string;
-    description?: string;
-  }>;
-
-  // Authentication (required for remote backends)
-  token?: string;
-  getToken?: () => Promise<string>;
-  baseUrl?: string;
-
-  // User identity for permissions
-  user?: {
-    id: string;
-    email?: string;
-    displayName?: string;
-  };
-
-  // Permission overrides
-  permissions?: {
-    canCreate?: boolean;
-    canEditOwn?: boolean;
-    canEditAll?: boolean;
-    canDeleteOwn?: boolean;
-    canDeleteAll?: boolean;
-    canComment?: boolean;
-    canManageLabels?: boolean;
-  };
-
-  // UI customization
-  position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
-  theme?: Partial<TrakletTheme>;
-
-  // Offline behavior
-  offline?: {
-    enabled?: boolean;
-    maxQueueSize?: number;
-    syncInterval?: number;
-  };
-}
-```
-
-### Theme Customization
-
-```typescript
-await TrakletBuilder
-  .create()
-  .useLocalStorage()
-  .addProject('demo', 'Demo')
-  .withTheme({
-    // Colors
-    primary: '#6366f1',
-    success: '#22c55e',
-    warning: '#f59e0b',
-    danger: '#ef4444',
-
-    // Background
-    bg: '#ffffff',
-    bgSecondary: '#f9fafb',
-    bgHover: '#f3f4f6',
-
-    // Text
-    text: '#111827',
-    textSecondary: '#6b7280',
-    textMuted: '#9ca3af',
-
-    // Borders
-    border: '#e5e7eb',
-    borderMuted: '#f3f4f6',
-
-    // Sizing
-    radiusSm: '4px',
-    radiusMd: '6px',
-    radiusLg: '8px',
-  })
-  .build();
-```
-
-## API Reference
-
-### TrakletInstance
-
-```typescript
-interface TrakletInstance {
-  // Widget controls
-  open(): void;
-  close(): void;
-  isOpen(): boolean;
-
-  // Project management
-  getCurrentProject(): Project | null;
-  getProjects(): readonly Project[];
-  switchProject(projectId: string): Promise<void>;
-
-  // Refresh data
-  refresh(): Promise<void>;
-
-  // Cleanup
-  destroy(): void;
-
-  // Presenters for custom UI integration
-  getWidgetPresenter(): IWidgetPresenter;
-  getIssueListPresenter(): IssueListPresenter;
-  getIssueDetailPresenter(): IssueDetailPresenter;
-  getIssueFormPresenter(): IssueFormPresenter;
-}
-```
-
-### Event System
-
-Subscribe to events for custom integrations:
-
-```typescript
-import { getEventBus } from 'traklet';
-
-const eventBus = getEventBus();
-
-// Issue events
-eventBus.on('issue:created', ({ issue }) => {
-  console.log('New issue:', issue.title);
+await Traklet.init({
+  adapter: 'azure-devops',
+  baseUrl: 'https://dev.azure.com/your-org',
+  token: process.env.TRAKLET_PAT,  // Always use env vars
+  projects: [{ id: 'your-project', name: 'Your Project', identifier: 'your-project' }],
 });
-
-eventBus.on('issue:updated', ({ issue, changes }) => {
-  console.log('Issue updated:', issue.id);
-});
-
-eventBus.on('issue:deleted', ({ issueId }) => {
-  console.log('Issue deleted:', issueId);
-});
-
-// Connection events
-eventBus.on('connection:connected', ({ projects }) => {
-  console.log('Connected with projects:', projects);
-});
-
-eventBus.on('connection:disconnected', () => {
-  console.log('Disconnected');
-});
-
-// Widget events
-eventBus.on('widget:opened', () => {});
-eventBus.on('widget:closed', () => {});
 ```
 
-## Web Components
-
-Traklet uses Lit-based Web Components with Shadow DOM. You can use them directly:
-
-```html
-<script type="module">
-  import { Traklet } from 'traklet';
-  import 'traklet/lit';
-
-  const instance = await Traklet.init({
-    adapter: 'localStorage',
-    projects: [{ id: 'demo', name: 'Demo' }]
-  });
-
-  // Use the web component
-  const widget = document.createElement('traklet-widget');
-  widget.instance = instance;
-  widget.position = 'bottom-right';
-  document.body.appendChild(widget);
-</script>
-```
-
-## Testing Your Configuration
-
-Traklet includes a validation helper to test your configuration before deployment:
+### GitHub Issues
 
 ```typescript
-import { validateConfig, TrakletBuilder } from 'traklet';
-
-// Validate raw config
-const result = validateConfig({
+await Traklet.init({
   adapter: 'github',
-  projects: [{ id: 'owner/repo', name: 'My Repo' }],
-  token: process.env.GITHUB_TOKEN
+  token: process.env.GITHUB_TOKEN,
+  projects: [{ id: 'owner/repo', name: 'My Repo', identifier: 'owner/repo' }],
 });
-
-if (!result.valid) {
-  console.error('Config errors:', result.errors);
-}
-
-// Or use the builder with built-in validation
-try {
-  const builder = TrakletBuilder
-    .create()
-    .useGitHub({ token: 'invalid' })
-    .addProject('', '');  // Will throw validation error
-
-  await builder.validate(); // Throws if invalid
-  await builder.build();
-} catch (error) {
-  console.error('Configuration error:', error.message);
-}
 ```
 
-## Browser Support
+### Generic REST API
 
-- Chrome 90+
-- Firefox 90+
-- Safari 15+
-- Edge 90+
+```typescript
+await Traklet.init({
+  adapter: 'rest',
+  baseUrl: 'https://api.example.com',
+  token: process.env.API_TOKEN,
+  projects: [{ id: 'project-1', name: 'Project One' }],
+});
+```
+
+---
+
+## Security: Token Management
+
+> **Never commit tokens to source code or version control.**
+
+Traklet enforces this with multiple safeguards:
+
+### How to Provide Tokens
+
+```typescript
+// CORRECT: Environment variable
+await Traklet.init({
+  adapter: 'azure-devops',
+  token: process.env.TRAKLET_PAT,
+  // ...
+});
+
+// CORRECT: Dynamic callback (e.g., from your auth system)
+await Traklet.init({
+  adapter: 'azure-devops',
+  getToken: async () => await yourAuthService.getToken(),
+  // ...
+});
+
+// CORRECT: User enters token in the widget settings gear
+// (stored per-browser in localStorage, never in code)
+await Traklet.init({
+  adapter: 'azure-devops',
+  // No token — user enters it via settings UI
+  // ...
+});
+```
+
+```typescript
+// WRONG: Hardcoded token in source code
+await Traklet.init({
+  token: 'EVYu...actual-token-here',  // DO NOT DO THIS
+});
+```
+
+### Local Development Settings
+
+For local development, create `.traklet/settings.json` (gitignored by default):
+
+```bash
+cp .traklet/settings.template.json .traklet/settings.json
+# Edit settings.json with your token — this file never gets committed
+```
+
+### Shared Team Access (UAT/Staging)
+
+For deployed UAT environments where multiple testers need access:
+
+1. **Set the token via environment variable** on the server
+2. Each tester identifies themselves via the settings gear (name + email)
+3. The token provides access; the name/email provides attribution
+
+```typescript
+// In your deployed app's initialization
+await Traklet.init({
+  adapter: 'azure-devops',
+  token: process.env.TRAKLET_PAT,      // Shared service account token
+  baseUrl: process.env.TRAKLET_ADO_URL,
+  projects: [{ id: process.env.TRAKLET_PROJECT, name: 'UAT' }],
+});
+// Each tester enters their name in the widget settings gear
+```
+
+### Built-in Safeguards
+
+| Safeguard | What it does |
+|-----------|-------------|
+| `.gitignore` | `.traklet/settings.json` excluded from git |
+| **Pre-commit hook** | Blocks any attempt to commit settings.json, even with `git add -f` |
+| **Runtime warning** | Console warning if token appears hardcoded in browser context |
+| **`npm install` auto-setup** | Hook is configured automatically via `prepare` script |
+
+### Token Scopes Required
+
+| Backend | Required Scopes |
+|---------|----------------|
+| Azure DevOps | Work Items: Read & Write |
+| GitHub | `repo` (for private repos) or `public_repo` |
+| REST API | Depends on your API |
+
+---
+
+## Test Case Management
+
+### `.traklet/` Folder Convention
+
+Define test cases as markdown files in your repo:
+
+```
+.traklet/
+├── config.md              # Project config
+├── settings.json          # YOUR token (gitignored, never committed)
+├── settings.template.json # Template (committed, no secrets)
+└── test-cases/
+    ├── auth/
+    │   ├── TC-001-login.md
+    │   └── TC-002-logout.md
+    └── dashboard/
+        └── TC-010-loads.md
+```
+
+### Test Case Format
+
+```markdown
+---
+id: TC-001
+title: "Login with valid credentials"
+priority: critical
+labels: [auth, smoke]
+depends: [TC-000]
+suite: auth
+---
+
+{traklet:section:objective}
+## Objective
+Verify login works with valid credentials.
+{/traklet:section:objective}
+
+{traklet:section:steps}
+## Steps
+1. Navigate to /login
+2. Enter valid credentials
+3. Click Sign In
+{/traklet:section:steps}
+
+{traklet:section:expected-result}
+## Expected Result
+User is redirected to /dashboard.
+{/traklet:section:expected-result}
+```
+
+### CLI Commands
+
+```bash
+npx traklet scan        # List discovered test cases
+npx traklet validate    # Check dependencies and format
+npx traklet sync        # Seed to backend (idempotent)
+npx traklet sync --dry-run  # Preview without creating
+```
+
+### Test Runs
+
+Start a test run from the widget (checkbox icon in header):
+1. Name the run (e.g., "Sprint 12 QA")
+2. Browse test cases → mark each as Pass/Fail/Blocked
+3. See progress in the dashboard
+4. Stop the run → results saved in history
+
+---
+
+## Widget Controls
+
+| Action | How |
+|--------|-----|
+| **Open** | Click the anchor icon |
+| **Close** | Click minimize (dash icon) |
+| **Drag** | Grab the header bar |
+| **Snap to edge** | Drag to left/right edge of screen |
+| **Resize sidebar** | Drag the inner edge handle |
+| **Unsnap** | Double-click header or drag away |
+| **Settings** | Gear icon in header |
+| **Test Runs** | Checkbox icon in header |
+| **Theme** | Settings → color swatches + dark mode toggle |
+
+---
 
 ## Development
 
 ```bash
-# Install dependencies
-npm install
-
-# Run tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-
-# Build
-npm run build
-
-# Type check
-npm run typecheck
+npm install          # Install deps + configure git hooks
+npm run dev          # Dev server on port 8888
+npm test             # Run 688+ unit tests
+npm run test:coverage # Coverage report (91%+ threshold)
+npx playwright test  # Run 19 E2E tests
+npm run build        # Production build
 ```
 
 ## Architecture
 
-Traklet follows a clean architecture with:
-
-- **ISP-compliant interfaces** - Granular interfaces (IIssueReader, IIssueWriter, etc.)
-- **Adapter pattern** - Swap backends without changing application code
+- **ISP Interfaces** - `IIssueReader`, `IIssueWriter`, `IIssueDeleter`, `ICommentManager`, etc.
+- **Adapter Pattern** - Swap backends without changing app code
 - **Presenter/ViewModel** - Skin-agnostic UI logic
-- **Event-driven** - Loosely coupled components via pub/sub
-
-```
-┌─────────────────────────────────────────────────┐
-│              Your Application                    │
-└─────────────────────┬───────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────┐
-│               Traklet Widget                     │
-│  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │
-│  │ Presenters│  │  State   │  │  Event Bus   │  │
-│  └────┬─────┘  └────┬─────┘  └──────────────┘  │
-│       └─────────────┼─────────────────────────┐ │
-│                     │                          │ │
-│              ┌──────▼──────┐                   │ │
-│              │   Adapter   │                   │ │
-│              │  Interface  │                   │ │
-│              └──────┬──────┘                   │ │
-└─────────────────────┼───────────────────────────┘
-                      │
-    ┌─────────────────┼─────────────────┐
-    ▼                 ▼                 ▼
-┌─────────┐    ┌───────────┐    ┌───────────┐
-│ GitHub  │    │   Azure   │    │   REST    │
-│ Issues  │    │  DevOps   │    │   API     │
-└─────────┘    └───────────┘    └───────────┘
-```
+- **Shadow DOM** - Complete CSS isolation
+- **Event Bus** - Loosely coupled pub/sub
 
 ## License
 
-MIT - see [LICENSE](LICENSE) for details.
-
-## Contributing
-
-Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+MIT
