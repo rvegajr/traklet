@@ -31,76 +31,64 @@ interface ThemePreset {
   readonly headerGradient: string;
 }
 
+// Color themes (applied independently of dark/light mode)
 const THEMES: readonly ThemePreset[] = [
   {
     name: 'ocean',
     label: 'Ocean',
     swatch: '#0969da',
     headerGradient: 'linear-gradient(135deg, #0969da 0%, #1a7f37 100%)',
-    vars: {
-      '--traklet-primary': '#0969da',
-      '--traklet-primary-hover': '#0860ca',
-    },
+    vars: { '--traklet-primary': '#0969da', '--traklet-primary-hover': '#0860ca' },
   },
   {
     name: 'purple',
     label: 'Purple',
     swatch: '#7c3aed',
     headerGradient: 'linear-gradient(135deg, #7c3aed 0%, #db2777 100%)',
-    vars: {
-      '--traklet-primary': '#7c3aed',
-      '--traklet-primary-hover': '#6d28d9',
-    },
+    vars: { '--traklet-primary': '#7c3aed', '--traklet-primary-hover': '#6d28d9' },
   },
   {
     name: 'sunset',
     label: 'Sunset',
     swatch: '#ea580c',
     headerGradient: 'linear-gradient(135deg, #ea580c 0%, #dc2626 100%)',
-    vars: {
-      '--traklet-primary': '#ea580c',
-      '--traklet-primary-hover': '#c2410c',
-    },
+    vars: { '--traklet-primary': '#ea580c', '--traklet-primary-hover': '#c2410c' },
   },
   {
     name: 'teal',
     label: 'Teal',
     swatch: '#0d9488',
     headerGradient: 'linear-gradient(135deg, #0d9488 0%, #0369a1 100%)',
-    vars: {
-      '--traklet-primary': '#0d9488',
-      '--traklet-primary-hover': '#0f766e',
-    },
+    vars: { '--traklet-primary': '#0d9488', '--traklet-primary-hover': '#0f766e' },
   },
   {
     name: 'slate',
     label: 'Slate',
     swatch: '#475569',
     headerGradient: 'linear-gradient(135deg, #475569 0%, #1e293b 100%)',
-    vars: {
-      '--traklet-primary': '#475569',
-      '--traklet-primary-hover': '#334155',
-    },
-  },
-  {
-    name: 'dark',
-    label: 'Dark',
-    swatch: '#1e1e2e',
-    headerGradient: 'linear-gradient(135deg, #1e1e2e 0%, #313244 100%)',
-    vars: {
-      '--traklet-primary': '#89b4fa',
-      '--traklet-primary-hover': '#74c7ec',
-      '--traklet-bg': '#1e1e2e',
-      '--traklet-bg-secondary': '#181825',
-      '--traklet-bg-hover': '#313244',
-      '--traklet-text': '#cdd6f4',
-      '--traklet-text-secondary': '#a6adc8',
-      '--traklet-text-muted': '#6c7086',
-      '--traklet-border': '#45475a',
-      '--traklet-border-muted': '#313244',
-    },
+    vars: { '--traklet-primary': '#475569', '--traklet-primary-hover': '#334155' },
   },
 ] as const;
+
+// Dark mode overrides (separate from color theme)
+const DARK_MODE_VARS: Record<string, string> = {
+  '--traklet-bg': '#1e1e2e',
+  '--traklet-bg-secondary': '#181825',
+  '--traklet-bg-hover': '#313244',
+  '--traklet-text': '#cdd6f4',
+  '--traklet-text-secondary': '#a6adc8',
+  '--traklet-text-muted': '#6c7086',
+  '--traklet-border': '#45475a',
+  '--traklet-border-muted': '#313244',
+};
+
+// All CSS vars that themes/dark mode might set (used for cleanup)
+const ALL_THEME_VARS = [
+  '--traklet-primary', '--traklet-primary-hover', '--traklet-header-gradient',
+  '--traklet-bg', '--traklet-bg-secondary', '--traklet-bg-hover',
+  '--traklet-text', '--traklet-text-secondary', '--traklet-text-muted',
+  '--traklet-border', '--traklet-border-muted',
+];
 
 @customElement('traklet-widget')
 export class TrakletWidget extends LitElement {
@@ -529,6 +517,7 @@ export class TrakletWidget extends LitElement {
   @state() declare private showRunsView: boolean;
   @state() declare private showSettingsView: boolean;
   @state() declare private currentThemeName: string;
+  @state() declare private isDarkMode: boolean;
 
   constructor() {
     super();
@@ -547,6 +536,7 @@ export class TrakletWidget extends LitElement {
     this.showRunsView = false;
     this.showSettingsView = false;
     this.currentThemeName = this.getSavedSetting('__traklet_theme__') || 'ocean';
+    this.isDarkMode = this.getSavedSetting('__traklet_dark_mode__') === 'true';
   }
 
   private unsubscribeViewState?: () => void;
@@ -579,7 +569,7 @@ export class TrakletWidget extends LitElement {
     super.connectedCallback();
     this.updateFromInstance();
     this.restorePosition();
-    this.applyTheme(this.currentThemeName);
+    this.applyTheme(this.currentThemeName); // applies dark mode too if saved
   }
 
   override disconnectedCallback(): void {
@@ -1241,23 +1231,36 @@ export class TrakletWidget extends LitElement {
         <!-- Theme -->
         <div style="margin-bottom: var(--traklet-space-sm);">
           <label style="${lbl}">Theme</label>
-          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 6px;">
             ${THEMES.map((theme) => html`
               <button
                 title="${theme.label}"
                 data-testid="traklet-theme-${theme.name}"
                 style="
-                  width: 28px; height: 28px; border-radius: 50%; border: 2px solid ${this.currentThemeName === theme.name ? 'var(--traklet-text)' : 'transparent'};
+                  width: 26px; height: 26px; border-radius: 50%; border: 2px solid ${this.currentThemeName === theme.name ? 'var(--traklet-text)' : 'transparent'};
                   background: ${theme.headerGradient}; cursor: pointer; padding: 0;
-                  box-shadow: ${this.currentThemeName === theme.name ? '0 0 0 2px var(--traklet-bg), 0 0 0 4px var(--traklet-text)' : 'none'};
-                  transition: transform 150ms ease;
+                  box-shadow: ${this.currentThemeName === theme.name ? '0 0 0 2px var(--traklet-bg), 0 0 0 3px var(--traklet-text)' : 'none'};
                 "
                 @click=${() => this.applyTheme(theme.name)}
               ></button>
             `)}
+            <span style="width: 1px; height: 20px; background: var(--traklet-border); margin: 0 2px;"></span>
+            <button
+              title="${this.isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}"
+              data-testid="traklet-toggle-dark"
+              style="
+                width: 26px; height: 26px; border-radius: 50%; cursor: pointer; padding: 0;
+                border: 2px solid ${this.isDarkMode ? 'var(--traklet-text)' : 'transparent'};
+                background: ${this.isDarkMode ? '#1e1e2e' : '#f8fafc'};
+                display: flex; align-items: center; justify-content: center;
+                color: ${this.isDarkMode ? '#cdd6f4' : '#475569'};
+                font-size: 14px;
+              "
+              @click=${() => this.toggleDarkMode()}
+            >${this.isDarkMode ? html`&#9790;` : html`&#9788;`}</button>
           </div>
           <div style="font-size: 10px; color: var(--traklet-text-muted); margin-top: 2px;">
-            ${THEMES.find((t) => t.name === this.currentThemeName)?.label ?? 'Ocean'} theme. Persists across sessions.
+            ${THEMES.find((t) => t.name === this.currentThemeName)?.label ?? 'Ocean'}${this.isDarkMode ? ' (Dark)' : ''}. Persists across sessions.
           </div>
         </div>
 
@@ -1318,10 +1321,22 @@ export class TrakletWidget extends LitElement {
     const theme = THEMES.find((t) => t.name === themeName) ?? THEMES[0]!;
     this.currentThemeName = theme.name;
 
-    // Apply CSS custom properties to the host element
+    // Clear ALL theme-related CSS properties first (fixes stuck dark mode)
+    for (const key of ALL_THEME_VARS) {
+      this.style.removeProperty(key);
+    }
+
+    // Apply color theme
     this.style.setProperty('--traklet-header-gradient', theme.headerGradient);
     for (const [key, value] of Object.entries(theme.vars)) {
       this.style.setProperty(key, value);
+    }
+
+    // Apply dark mode on top if enabled
+    if (this.isDarkMode) {
+      for (const [key, value] of Object.entries(DARK_MODE_VARS)) {
+        this.style.setProperty(key, value);
+      }
     }
 
     // Update anchor icon color to match theme
@@ -1332,6 +1347,12 @@ export class TrakletWidget extends LitElement {
 
     // Persist
     this.saveSetting('__traklet_theme__', theme.name);
+  }
+
+  private toggleDarkMode(): void {
+    this.isDarkMode = !this.isDarkMode;
+    this.saveSetting('__traklet_dark_mode__', this.isDarkMode ? 'true' : '');
+    this.applyTheme(this.currentThemeName); // Re-apply with new mode
   }
 
   private getSavedSetting(key: string): string {
