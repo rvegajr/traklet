@@ -16,9 +16,11 @@ import {
   resetPermissionManager,
   DiagnosticCollector,
   getDiagnosticCollector,
+  getOperationQueue,
+  resetOperationQueue,
 } from './core';
 import type { TrakletConfig, DiagnosticData, RecordingSession } from './core';
-import { LocalStorageAdapter, AzureDevOpsAdapter } from './adapters';
+import { LocalStorageAdapter, AzureDevOpsAdapter, RestAdapter, GitHubAdapter } from './adapters';
 import { IssueListPresenter, IssueDetailPresenter, IssueFormPresenter } from './presenters';
 import type { IWidgetPresenter } from './presenters';
 
@@ -317,6 +319,7 @@ export class Traklet {
     getEventBus().emit('connection:disconnected', {});
 
     // Reset all managers
+    resetOperationQueue();
     resetConfigManager();
     resetStateManager();
     resetEventBus();
@@ -385,16 +388,10 @@ export class Traklet {
         return new AzureDevOpsAdapter();
 
       case 'github':
-        throw new Error(
-          `GitHub adapter is not yet available. Use 'azure-devops' or 'localStorage' instead. ` +
-          `GitHub Issues support is planned for a future release.`
-        );
+        return new GitHubAdapter();
 
       case 'rest':
-        throw new Error(
-          `REST adapter is not yet available. Use 'azure-devops' or 'localStorage' instead. ` +
-          `Generic REST API support is planned for a future release.`
-        );
+        return new RestAdapter();
 
       default:
         throw new Error(`Unknown adapter type: ${config.adapter}`);
@@ -473,7 +470,7 @@ export class Traklet {
       },
 
       getPendingOperationsCount() {
-        return stateManager.getState().pendingOperations;
+        return getOperationQueue().getCount();
       },
     };
   }

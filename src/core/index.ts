@@ -82,6 +82,18 @@ export type {
   RecordingSession,
 } from './DiagnosticCollector';
 
+// Operation Queue
+export {
+  OperationQueue,
+  getOperationQueue,
+  resetOperationQueue,
+} from './OperationQueue';
+export type {
+  QueuedOperation,
+  OperationType,
+  SyncResult,
+} from './OperationQueue';
+
 // Test Case Template
 export {
   parseTestCaseBody,
