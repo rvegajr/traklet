@@ -312,6 +312,131 @@ export class TrakletIssueDetail extends LitElement {
         outline: none;
         box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.1);
       }
+
+      /* Delete confirm */
+      .delete-confirm {
+        display: flex;
+        align-items: center;
+        gap: var(--traklet-space-sm);
+        padding: var(--traklet-space-sm) var(--traklet-space-md);
+        background: rgba(207, 34, 46, 0.06);
+        border-top: 1px solid rgba(207, 34, 46, 0.2);
+        font-size: var(--traklet-font-size-sm);
+        color: var(--traklet-danger);
+      }
+
+      .delete-confirm__text {
+        flex: 1;
+      }
+
+      /* Comments section */
+      .comments {
+        border-top: 1px solid var(--traklet-border-muted);
+        padding: var(--traklet-space-md);
+      }
+
+      .comments__title {
+        font-size: var(--traklet-font-size-sm);
+        font-weight: 600;
+        margin: 0 0 var(--traklet-space-md) 0;
+        color: var(--traklet-text);
+      }
+
+      .comment {
+        padding: var(--traklet-space-sm) 0;
+        border-bottom: 1px solid var(--traklet-border-muted);
+      }
+
+      .comment:last-of-type {
+        border-bottom: none;
+      }
+
+      .comment__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--traklet-space-xs);
+      }
+
+      .comment__author {
+        font-size: var(--traklet-font-size-xs);
+        font-weight: 600;
+        color: var(--traklet-text);
+      }
+
+      .comment__time {
+        font-size: var(--traklet-font-size-xs);
+        color: var(--traklet-text-muted);
+      }
+
+      .comment__body {
+        font-size: var(--traklet-font-size-sm);
+        line-height: 1.5;
+        color: var(--traklet-text);
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      .comment__actions {
+        display: flex;
+        gap: var(--traklet-space-xs);
+        margin-top: var(--traklet-space-xs);
+      }
+
+      .comment__action-btn {
+        font-size: var(--traklet-font-size-xs);
+        color: var(--traklet-text-muted);
+        cursor: pointer;
+        background: none;
+        border: none;
+        padding: 0;
+      }
+
+      .comment__action-btn:hover {
+        color: var(--traklet-primary);
+      }
+
+      .comment__action-btn--danger:hover {
+        color: var(--traklet-danger);
+      }
+
+      .comment-form {
+        display: flex;
+        gap: var(--traklet-space-sm);
+        margin-top: var(--traklet-space-md);
+      }
+
+      .comment-form__input {
+        flex: 1;
+        padding: var(--traklet-space-sm);
+        font-size: var(--traklet-font-size-sm);
+        font-family: inherit;
+        border: 1px solid var(--traklet-border);
+        border-radius: var(--traklet-radius-md);
+        resize: none;
+        min-height: 36px;
+        max-height: 100px;
+        color: var(--traklet-text);
+        background: var(--traklet-bg);
+      }
+
+      .comment-form__input:focus {
+        outline: none;
+        border-color: var(--traklet-primary);
+      }
+
+      .comment-edit-input {
+        width: 100%;
+        padding: var(--traklet-space-sm);
+        font-size: var(--traklet-font-size-sm);
+        font-family: inherit;
+        border: 1px solid var(--traklet-primary);
+        border-radius: var(--traklet-radius-md);
+        resize: none;
+        min-height: 36px;
+        color: var(--traklet-text);
+        background: var(--traklet-bg);
+      }
     `,
   ];
 
@@ -331,6 +456,10 @@ export class TrakletIssueDetail extends LitElement {
   @state() declare private editingSectionContent: string;
   @state() declare private jamUrlInput: string;
   @state() declare private isSaving: boolean;
+  @state() declare private showDeleteConfirm: boolean;
+  @state() declare private commentInput: string;
+  @state() declare private editingCommentId: string | null;
+  @state() declare private editingCommentBody: string;
 
   constructor() {
     super();
@@ -345,6 +474,10 @@ export class TrakletIssueDetail extends LitElement {
     this.editingSectionContent = '';
     this.jamUrlInput = '';
     this.isSaving = false;
+    this.showDeleteConfirm = false;
+    this.commentInput = '';
+    this.editingCommentId = null;
+    this.editingCommentBody = '';
   }
 
   private unsubscribe: (() => void) | null = null;
@@ -391,6 +524,8 @@ export class TrakletIssueDetail extends LitElement {
         this.activeSection = this.parsedBody.sections[0]!.id;
       }
       this.isLoading = false;
+      // Load comments
+      void this.presenter.loadComments();
     }
   }
 
@@ -410,6 +545,8 @@ export class TrakletIssueDetail extends LitElement {
     return html`
       ${this.renderHeader()}
       ${this.parsedBody?.isTestCase ? this.renderTestCase() : this.renderRegularIssue()}
+      ${this.renderComments()}
+      ${this.showDeleteConfirm ? this.renderDeleteConfirm() : nothing}
       ${this.renderActionsBar()}
     `;
   }
@@ -704,6 +841,19 @@ export class TrakletIssueDetail extends LitElement {
             `
           : nothing}
 
+        ${vm.canDelete
+          ? html`
+              <button
+                class="traklet-btn traklet-btn--ghost traklet-btn--sm"
+                data-testid="traklet-btn-delete"
+                style="color: var(--traklet-danger);"
+                @click=${() => { this.showDeleteConfirm = true; }}
+              >
+                Delete
+              </button>
+            `
+          : nothing}
+
         <div class="actions-bar__spacer"></div>
 
         ${this.parsedBody?.isTestCase
@@ -723,8 +873,149 @@ export class TrakletIssueDetail extends LitElement {
   }
 
   // ============================================
+  // Delete Confirm
+  // ============================================
+
+  private renderDeleteConfirm() {
+    return html`
+      <div class="delete-confirm" data-testid="traklet-delete-confirm">
+        <span class="delete-confirm__text">Delete this issue?</span>
+        <button
+          class="traklet-btn traklet-btn--danger traklet-btn--sm"
+          data-testid="traklet-btn-confirm-delete"
+          @click=${this.handleConfirmDelete}
+        >
+          Delete
+        </button>
+        <button
+          class="traklet-btn traklet-btn--ghost traklet-btn--sm"
+          @click=${() => { this.showDeleteConfirm = false; }}
+        >
+          Cancel
+        </button>
+      </div>
+    `;
+  }
+
+  // ============================================
+  // Comments
+  // ============================================
+
+  private renderComments() {
+    const vm = this.viewModel;
+    if (!vm) return nothing;
+
+    return html`
+      <div class="comments" data-testid="traklet-comments">
+        <h3 class="comments__title">Comments (${this.comments.length})</h3>
+
+        ${this.comments.map((comment) =>
+          this.editingCommentId === comment.id
+            ? this.renderCommentEditor(comment)
+            : this.renderComment(comment)
+        )}
+
+        ${vm.canAddComment ? html`
+          <div class="comment-form">
+            <textarea
+              class="comment-form__input"
+              placeholder="Add a comment..."
+              data-testid="traklet-input-comment"
+              .value=${this.commentInput}
+              @input=${(e: InputEvent) => { this.commentInput = (e.target as HTMLTextAreaElement).value; }}
+              @keydown=${(e: KeyboardEvent) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) this.handleAddComment();
+              }}
+            ></textarea>
+            <button
+              class="traklet-btn traklet-btn--primary traklet-btn--sm"
+              data-testid="traklet-btn-add-comment"
+              ?disabled=${!this.commentInput.trim()}
+              @click=${this.handleAddComment}
+            >
+              Post
+            </button>
+          </div>
+        ` : nothing}
+      </div>
+    `;
+  }
+
+  private renderComment(comment: CommentViewModel) {
+    return html`
+      <div class="comment" data-testid="traklet-comment-${comment.id}">
+        <div class="comment__header">
+          <span class="comment__author">${comment.author.name}</span>
+          <span class="comment__time">${comment.createdAt}</span>
+        </div>
+        <div class="comment__body">${comment.body}</div>
+        ${comment.canEdit || comment.canDelete ? html`
+          <div class="comment__actions">
+            ${comment.canEdit ? html`
+              <button class="comment__action-btn" @click=${() => this.startEditComment(comment)}>Edit</button>
+            ` : nothing}
+            ${comment.canDelete ? html`
+              <button class="comment__action-btn comment__action-btn--danger" @click=${() => this.handleDeleteComment(comment.id)}>Delete</button>
+            ` : nothing}
+          </div>
+        ` : nothing}
+      </div>
+    `;
+  }
+
+  private renderCommentEditor(comment: CommentViewModel) {
+    return html`
+      <div class="comment">
+        <textarea
+          class="comment-edit-input"
+          .value=${this.editingCommentBody}
+          @input=${(e: InputEvent) => { this.editingCommentBody = (e.target as HTMLTextAreaElement).value; }}
+        ></textarea>
+        <div class="comment__actions" style="margin-top: 4px;">
+          <button class="comment__action-btn" @click=${() => this.handleSaveCommentEdit(comment.id)}>Save</button>
+          <button class="comment__action-btn" @click=${this.cancelCommentEdit}>Cancel</button>
+        </div>
+      </div>
+    `;
+  }
+
+  // ============================================
   // Event Handlers
   // ============================================
+
+  private async handleConfirmDelete() {
+    await this.presenter?.deleteIssue();
+    this.showDeleteConfirm = false;
+  }
+
+  private async handleAddComment() {
+    const body = this.commentInput.trim();
+    if (!body || !this.presenter) return;
+
+    await this.presenter.addComment(body);
+    this.commentInput = '';
+  }
+
+  private startEditComment(comment: CommentViewModel) {
+    this.editingCommentId = comment.id;
+    this.editingCommentBody = comment.body;
+  }
+
+  private async handleSaveCommentEdit(commentId: string) {
+    if (!this.editingCommentBody.trim() || !this.presenter) return;
+    await this.presenter.editComment(commentId, this.editingCommentBody.trim());
+    this.editingCommentId = null;
+    this.editingCommentBody = '';
+  }
+
+  private cancelCommentEdit() {
+    this.editingCommentId = null;
+    this.editingCommentBody = '';
+  }
+
+  private async handleDeleteComment(commentId: string) {
+    await this.presenter?.deleteComment(commentId);
+  }
 
   private scrollToSection(sectionId: string) {
     this.activeSection = sectionId;

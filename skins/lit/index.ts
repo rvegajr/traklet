@@ -7,6 +7,7 @@
 export { TrakletWidget } from './components/TrakletWidget';
 export { TrakletIssueList } from './components/TrakletIssueList';
 export { TrakletIssueDetail } from './components/TrakletIssueDetail';
+export { TrakletIssueForm } from './components/TrakletIssueForm';
 
 // Styles
 export { baseStyles, buttonStyles, formStyles, labelStyles, layoutStyles } from './styles/base';

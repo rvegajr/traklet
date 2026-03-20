@@ -15,8 +15,10 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { baseStyles, buttonStyles, layoutStyles } from '../styles/base';
 import type { TrakletInstance } from '../../../src/Traklet';
 import type { Project } from '../../../src/models';
+import { getEventBus } from '../../../src/core';
 import './TrakletIssueList';
 import './TrakletIssueDetail';
+import './TrakletIssueForm';
 
 type PanelMode = 'floating' | 'snapped-left' | 'snapped-right';
 
@@ -440,6 +442,8 @@ export class TrakletWidget extends LitElement {
   }
 
   private unsubscribeViewState?: () => void;
+  private unsubscribeEvents: Array<() => void> = [];
+  private navigateHandler: ((e: Event) => void) | null = null;
 
   // Drag state (MANDATE 7: all listeners stored for cleanup)
   private dragOffsetX = 0;
@@ -472,6 +476,12 @@ export class TrakletWidget extends LitElement {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.unsubscribeViewState?.();
+    for (const unsub of this.unsubscribeEvents) unsub();
+    this.unsubscribeEvents = [];
+    if (this.navigateHandler) {
+      this.removeEventListener('navigate', this.navigateHandler);
+      this.navigateHandler = null;
+    }
     this.cleanupDragListeners();
     this.cleanupAnchorDragListeners();
     this.cleanupResizeListeners();
@@ -497,6 +507,31 @@ export class TrakletWidget extends LitElement {
     this.unsubscribeViewState = presenter.subscribeToViewState((state) => {
       this.viewState = state;
     });
+
+    // Subscribe to mutation events to refresh the issue list
+    for (const unsub of this.unsubscribeEvents) unsub();
+    this.unsubscribeEvents = [];
+    const bus = getEventBus();
+    const refreshList = () => { void this.instance?.getIssueListPresenter()?.refresh(); };
+    this.unsubscribeEvents.push(
+      bus.on('issue:created', refreshList),
+      bus.on('issue:updated', refreshList),
+      bus.on('issue:deleted', refreshList),
+    );
+
+    // Listen for navigate events from child components (e.g., edit button in detail view)
+    if (!this.navigateHandler) {
+      this.navigateHandler = (e: Event) => {
+        const detail = (e as CustomEvent).detail as { view: string; issueId?: string };
+        if (detail.view && presenter) {
+          presenter.navigateTo(
+            detail.view as 'list' | 'detail' | 'create' | 'edit',
+            detail.issueId ? { issueId: detail.issueId } : undefined
+          );
+        }
+      };
+      this.addEventListener('navigate', this.navigateHandler);
+    }
   }
 
   // ============================================
@@ -608,8 +643,20 @@ export class TrakletWidget extends LitElement {
           ></traklet-issue-detail>
         `;
       case 'create':
-      case 'edit':
-        return html`<div style="padding: 16px; color: var(--traklet-text-secondary);">Issue Form (coming soon)</div>`;
+        return html`
+          <traklet-issue-form
+            .presenter=${this.instance?.getIssueFormPresenter()}
+          ></traklet-issue-form>
+        `;
+      case 'edit': {
+        const detailVm = this.instance?.getIssueDetailPresenter()?.getViewModel();
+        return html`
+          <traklet-issue-form
+            .presenter=${this.instance?.getIssueFormPresenter()}
+            .issueId=${detailVm?.id}
+          ></traklet-issue-form>
+        `;
+      }
       default:
         return nothing;
     }
