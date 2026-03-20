@@ -1338,13 +1338,13 @@ export class TrakletWidget extends LitElement {
           <div style="font-size: 10px; color: var(--traklet-text-muted); margin-top: 2px;">
             ${savedToken
               ? 'Token saved. Persists across refreshes.'
-              : 'Can be a shared team token (set in code or .traklet/settings.json) or your personal PAT.'}
+              : 'Enter your PAT or ask your team lead for the shared token.'}
           </div>
         </div>
 
         <!-- How it works -->
         <div style="padding: 6px 8px; background: rgba(9,105,218,0.05); border: 1px solid rgba(9,105,218,0.12); border-radius: var(--traklet-radius-md); font-size: 10px; color: var(--traklet-text-secondary); line-height: 1.5;">
-          <strong>How identity works:</strong> The PAT token provides access to the backend. Your name and email (above) identify you on test results and comments. A shared PAT means everyone can access the same project — each tester is distinguished by their name/email, not their token.
+          <strong>How it works:</strong> The PAT token gives access to the backend. Your name/email identify you on test results. For deployed apps, the token should be set via environment variable — never committed to source code. The <code style="font-size: 10px; background: var(--traklet-bg-secondary); padding: 1px 3px; border-radius: 2px;">.traklet/settings.json</code> file is gitignored by default.
         </div>
       </div>
     `;
