@@ -32,6 +32,7 @@
   },
   "homepage": "https://github.com/user/traklet#readme",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
     "dev": "vite --port 8888",
     "build": "tsc && vite build",
     "build:types": "tsc --emitDeclarationOnly",

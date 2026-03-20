@@ -1,0 +1,19 @@
+#!/bin/sh
+#
+# Pre-commit hook: prevent .traklet/settings.json from being committed.
+# This file may contain PAT tokens and must never enter source control.
+#
+
+if git diff --cached --name-only | grep -q '\.traklet/settings\.json'; then
+  echo ""
+  echo "ERROR: .traklet/settings.json is staged for commit."
+  echo "This file may contain PAT tokens and must not be committed."
+  echo ""
+  echo "To unstage it:"
+  echo "  git reset HEAD .traklet/settings.json"
+  echo ""
+  echo "The file is already in .gitignore. If you force-added it,"
+  echo "remove it with: git rm --cached .traklet/settings.json"
+  echo ""
+  exit 1
+fi

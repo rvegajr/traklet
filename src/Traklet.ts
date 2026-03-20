@@ -128,6 +128,14 @@ export class Traklet {
       throw new Error(`Invalid configuration: ${validation.errors.join(', ')}`);
     }
 
+    // Warn if token appears hardcoded (not from env var or callback)
+    if (config.token && !config.getToken && typeof process === 'undefined') {
+      console.warn(
+        '[Traklet] Token passed directly to init(). For production, use an environment variable ' +
+        'or getToken callback to avoid exposing tokens in source code.'
+      );
+    }
+
     // Create adapter based on config
     const adapter = Traklet.createAdapter(config);
 
