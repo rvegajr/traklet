@@ -1134,58 +1134,80 @@ export class TrakletWidget extends LitElement {
 
   private renderSettings() {
     const isConnected = this.instance?.getWidgetPresenter()?.isConnected() ?? false;
-    const savedToken = this.getSavedToken();
-    const labelStyle = 'display: block; font-size: 11px; font-weight: 600; color: var(--traklet-text-secondary); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;';
-    const fieldStyle = 'padding: 6px 8px; background: var(--traklet-bg-secondary); border-radius: var(--traklet-radius-md); border: 1px solid var(--traklet-border-muted); color: var(--traklet-text); font-size: 13px;';
+    const savedToken = this.getSavedSetting('__traklet_pat__');
+    const savedEmail = this.getSavedSetting('__traklet_user_email__');
+    const lbl = 'display: block; font-size: 11px; font-weight: 600; color: var(--traklet-text-secondary); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;';
+    const fld = 'width: 100%; padding: 5px 8px; background: var(--traklet-bg); border-radius: var(--traklet-radius-md); border: 1px solid var(--traklet-border); color: var(--traklet-text); font-size: 12px; box-sizing: border-box;';
 
     return html`
       <div style="padding: var(--traklet-space-md); font-size: var(--traklet-font-size-sm);">
+
+        <!-- Status -->
+        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: var(--traklet-space-sm); padding: 5px 8px; background: ${isConnected ? 'rgba(22,163,74,0.06)' : 'rgba(220,38,38,0.06)'}; border: 1px solid ${isConnected ? 'rgba(22,163,74,0.2)' : 'rgba(220,38,38,0.2)'}; border-radius: var(--traklet-radius-md);">
+          <span style="width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: ${isConnected ? 'var(--traklet-success)' : 'var(--traklet-danger)'};"></span>
+          <span style="font-size: 12px; font-weight: 500;">${isConnected ? 'Connected' : 'Disconnected'}${this.currentProject ? html` &middot; ${this.currentProject.name}` : nothing}</span>
+        </div>
+
+        <!-- Your Email -->
         <div style="margin-bottom: var(--traklet-space-sm);">
-          <label style="${labelStyle}">Status</label>
-          <div style="display: flex; align-items: center; gap: 6px; ${fieldStyle}">
-            <span style="width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: ${isConnected ? 'var(--traklet-success)' : 'var(--traklet-danger)'};"></span>
-            ${isConnected ? 'Connected' : 'Disconnected'}
-            ${this.currentProject ? html` &middot; ${this.currentProject.name}` : nothing}
+          <label style="${lbl}">Your Email</label>
+          <input
+            type="email"
+            placeholder="you@company.com"
+            data-testid="traklet-input-email"
+            .value=${savedEmail}
+            style="${fld}"
+            @change=${(e: Event) => this.saveSetting('__traklet_user_email__', (e.target as HTMLInputElement).value)}
+          />
+          <div style="font-size: 10px; color: var(--traklet-text-muted); margin-top: 2px;">
+            Used to filter issues assigned to you and to identify your test results. The list defaults to showing your issues first but you can always see everyone's.
           </div>
         </div>
 
+        <!-- PAT Token -->
         <div style="margin-bottom: var(--traklet-space-sm);">
-          <label style="${labelStyle}">PAT Token</label>
-          <div style="display: flex; gap: 4px;">
-            <input
-              type="password"
-              placeholder="Paste PAT token here"
-              data-testid="traklet-input-pat"
-              .value=${savedToken}
-              style="flex: 1; ${fieldStyle} font-family: monospace; font-size: 12px;"
-              @change=${(e: Event) => this.saveToken((e.target as HTMLInputElement).value)}
-            />
-          </div>
-          <div style="font-size: 11px; color: var(--traklet-text-muted); margin-top: 2px;">
-            ${savedToken ? 'Token saved locally.' : 'Stored in localStorage for this browser.'}
+          <label style="${lbl}">PAT Token</label>
+          <input
+            type="password"
+            placeholder="Paste your Personal Access Token"
+            data-testid="traklet-input-pat"
+            .value=${savedToken}
+            style="${fld} font-family: monospace;"
+            @change=${(e: Event) => this.saveSetting('__traklet_pat__', (e.target as HTMLInputElement).value)}
+          />
+          <div style="font-size: 10px; color: var(--traklet-text-muted); margin-top: 2px;">
+            ${savedToken
+              ? html`Saved in your browser's localStorage. <strong>You won't need to enter this again</strong> unless you clear browser data or switch browsers.`
+              : html`Your token is stored in <strong>localStorage</strong> and persists across browser refreshes. You only enter it once per browser.`}
           </div>
         </div>
 
-        <div style="padding: 6px 8px; background: rgba(9, 105, 218, 0.06); border: 1px solid rgba(9, 105, 218, 0.15); border-radius: var(--traklet-radius-md); font-size: 11px; color: var(--traklet-text-secondary); line-height: 1.5;">
-          <strong>Setup in code:</strong><br/>
-          <code style="background: var(--traklet-bg-secondary); padding: 1px 4px; border-radius: 3px; font-size: 11px;">Traklet.init({ adapter: 'azure-devops', token: 'PAT', baseUrl: '...', projects: [...] })</code>
+        <!-- Persistence info -->
+        <div style="padding: 6px 8px; background: rgba(9,105,218,0.05); border: 1px solid rgba(9,105,218,0.12); border-radius: var(--traklet-radius-md); font-size: 10px; color: var(--traklet-text-secondary); line-height: 1.5; margin-bottom: var(--traklet-space-sm);">
+          <strong>No re-entry needed.</strong> Your email and token are saved in this browser's localStorage. They survive page refreshes, tab closes, and browser restarts. Only clearing site data or switching to a different browser/device will require re-entry.
+        </div>
+
+        <!-- Code setup -->
+        <div style="padding: 6px 8px; background: var(--traklet-bg-secondary); border: 1px solid var(--traklet-border-muted); border-radius: var(--traklet-radius-md); font-size: 10px; color: var(--traklet-text-secondary); line-height: 1.5;">
+          <strong>For developers:</strong> To skip this UI entirely, set the token in your app's code:<br/>
+          <code style="font-size: 10px; background: var(--traklet-bg); padding: 1px 4px; border-radius: 3px;">Traklet.init({ token: 'YOUR_PAT', user: { email: '...' }, ... })</code>
         </div>
       </div>
     `;
   }
 
-  private getSavedToken(): string {
+  private getSavedSetting(key: string): string {
     try {
-      return localStorage.getItem('__traklet_pat__') ?? '';
+      return localStorage.getItem(key) ?? '';
     } catch { return ''; }
   }
 
-  private saveToken(token: string): void {
+  private saveSetting(key: string, value: string): void {
     try {
-      if (token.trim()) {
-        localStorage.setItem('__traklet_pat__', token.trim());
+      if (value.trim()) {
+        localStorage.setItem(key, value.trim());
       } else {
-        localStorage.removeItem('__traklet_pat__');
+        localStorage.removeItem(key);
       }
     } catch { /* localStorage unavailable */ }
   }
