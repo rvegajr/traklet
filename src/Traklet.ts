@@ -22,6 +22,12 @@ import { LocalStorageAdapter, AzureDevOpsAdapter } from './adapters';
 import { IssueListPresenter, IssueDetailPresenter, IssueFormPresenter } from './presenters';
 import type { IWidgetPresenter } from './presenters';
 
+/** Type for the widget element once Lit skin is loaded */
+interface TrakletWidgetElement extends HTMLElement {
+  instance: TrakletInstance;
+  position: string;
+}
+
 export interface TrakletInstance {
   /** Destroy the widget and clean up */
   destroy(): void;
@@ -279,6 +285,11 @@ export class Traklet {
     // Auto-load issues
     await issueListPresenter.loadIssues();
 
+    // Auto-mount widget to DOM (unless headless mode)
+    if (typeof window !== 'undefined' && !config.headless) {
+      await Traklet.mountWidget(instance, config);
+    }
+
     return instance;
   }
 
@@ -293,6 +304,9 @@ export class Traklet {
    * Destroy the current instance
    */
   private static destroy(adapter: IBackendAdapter): void {
+    // Remove widget from DOM
+    Traklet.unmountWidget();
+
     // Disconnect adapter
     void adapter.disconnect();
 
@@ -310,6 +324,53 @@ export class Traklet {
     resetPermissionManager();
 
     Traklet.instance = null;
+  }
+
+  private static widgetElement: TrakletWidgetElement | null = null;
+
+  /**
+   * Auto-mount the widget element to the DOM.
+   * Dynamically imports the Lit skin so it's tree-shakeable when headless.
+   * Silently skips if the environment doesn't support custom elements (e.g., jsdom).
+   */
+  private static async mountWidget(
+    instance: TrakletInstance,
+    config: TrakletConfig
+  ): Promise<void> {
+    try {
+      // Dynamically import Lit skin to register <traklet-widget>
+      await import('../skins/lit/components/TrakletWidget');
+
+      const widget = document.createElement('traklet-widget') as TrakletWidgetElement;
+
+      // Resolve position
+      const position =
+        typeof config.position === 'string'
+          ? config.position
+          : config.position?.placement ?? 'bottom-right';
+      widget.setAttribute('position', position);
+      widget.setAttribute('data-traklet-widget', '');
+      widget.instance = instance;
+
+      // Append to container or body
+      const container = config.container ?? document.body;
+      container.appendChild(widget);
+
+      Traklet.widgetElement = widget;
+    } catch {
+      // Widget mounting failed (e.g., test environment without custom element support).
+      // Traklet still works in headless mode via the programmatic API.
+    }
+  }
+
+  /**
+   * Remove the widget element from the DOM
+   */
+  private static unmountWidget(): void {
+    if (Traklet.widgetElement) {
+      Traklet.widgetElement.remove();
+      Traklet.widgetElement = null;
+    }
   }
 
   /**

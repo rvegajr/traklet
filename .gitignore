@@ -49,3 +49,4 @@ temp/
 # Package manager locks (keep one)
 # yarn.lock
 # pnpm-lock.yaml
+test-results/

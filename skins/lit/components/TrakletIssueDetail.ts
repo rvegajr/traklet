@@ -21,7 +21,7 @@ import type { ParsedTestCase, TestCaseSection } from '@/core/TestCaseTemplate';
 
 @customElement('traklet-issue-detail')
 export class TrakletIssueDetail extends LitElement {
-  static styles = [
+  static override styles = [
     baseStyles,
     buttonStyles,
     formStyles,
@@ -349,17 +349,17 @@ export class TrakletIssueDetail extends LitElement {
 
   private unsubscribe: (() => void) | null = null;
 
-  connectedCallback() {
+  override connectedCallback() {
     super.connectedCallback();
     this.subscribeToPresenter();
   }
 
-  disconnectedCallback() {
+  override disconnectedCallback() {
     super.disconnectedCallback();
     this.unsubscribe?.();
   }
 
-  updated(changed: Map<string, unknown>) {
+  override updated(changed: Map<string, unknown>) {
     if (changed.has('presenter')) {
       this.unsubscribe?.();
       this.subscribeToPresenter();
@@ -379,7 +379,7 @@ export class TrakletIssueDetail extends LitElement {
         }
         this.isLoading = false;
       }
-      this.comments = this.presenter!.getComments();
+      this.comments = [...this.presenter!.getComments()];
     });
 
     // Initial load
@@ -394,7 +394,7 @@ export class TrakletIssueDetail extends LitElement {
     }
   }
 
-  render() {
+  override render() {
     if (this.isLoading) {
       return html`<div class="traklet-loading"><div class="traklet-spinner"></div></div>`;
     }
@@ -562,7 +562,7 @@ export class TrakletIssueDetail extends LitElement {
   // Evidence Section (Jam.dev integration)
   // ============================================
 
-  private renderEvidenceSection(section: TestCaseSection) {
+  private renderEvidenceSection(_section: TestCaseSection) {
     const jamLinks = this.parsedBody?.jamLinks ?? [];
 
     return html`
@@ -789,7 +789,7 @@ export class TrakletIssueDetail extends LitElement {
         body = addDiagnostics(body, this.diagnosticsMarkdown);
       }
 
-      await this.presenter.editIssue({ body });
+      await this.presenter.updateIssueInline({ body });
     } finally {
       this.isSaving = false;
     }

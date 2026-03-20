@@ -83,6 +83,9 @@ export interface TrakletConfig {
 
   /** Collect diagnostic info (console logs, errors, environment) - default: true */
   readonly collectDiagnostics?: boolean | undefined;
+
+  /** Headless mode - skip widget auto-mount (for testing or custom UI) - default: false */
+  readonly headless?: boolean | undefined;
 }
 
 // Zod schemas for validation

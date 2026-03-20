@@ -7,13 +7,10 @@ import { Traklet } from '../src/Traklet';
 import { composeTestCaseBody } from '../src/core/TestCaseTemplate';
 import type { TrakletInstance } from '../src/Traklet';
 
-// Import Lit skin to register web components
-import '../skins/lit/components/TrakletWidget';
-
 const PROJECT_ID = 'flight-deck';
 
 async function initDemo(): Promise<void> {
-  // Initialize Traklet with localStorage adapter
+  // That's it. Widget auto-mounts to document.body.
   const instance = await Traklet.init({
     adapter: 'localStorage',
     projects: [
@@ -24,18 +21,10 @@ async function initDemo(): Promise<void> {
       name: 'QA Tester',
     },
     position: 'bottom-right',
-    collectDiagnostics: true,
   });
 
-  // Seed sample issues through the form presenter
+  // Seed sample data for the demo
   await seedSampleData(instance);
-
-  // Create and mount the widget
-  const widget = document.createElement('traklet-widget');
-  widget.setAttribute('position', 'bottom-right');
-  widget.setAttribute('data-traklet-widget', '');
-  (widget as unknown as { instance: TrakletInstance }).instance = instance;
-  document.body.appendChild(widget);
 
   console.log('Traklet demo initialized.');
 }

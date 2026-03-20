@@ -21,6 +21,7 @@ describe('Traklet', () => {
         email: 'test@example.com',
         name: 'Test User',
       },
+      headless: true,
     };
   });
 
