@@ -1235,32 +1235,61 @@ export class TrakletWidget extends LitElement {
 
   private renderSettings() {
     const savedToken = this.getSavedSetting('__traklet_pat__');
-    const savedIdentity = this.getSavedSetting('__traklet_user_identity__');
-    const identity = savedIdentity ? JSON.parse(savedIdentity) as { name: string; email: string } : null;
+    const savedName = this.getSavedSetting('__traklet_user_name__');
+    const savedEmail = this.getSavedSetting('__traklet_user_email__');
+    const hasIdentity = !!(savedName || savedEmail);
+    const displayName = savedName || savedEmail || '';
+    const initial = displayName ? displayName.charAt(0).toUpperCase() : '?';
     const lbl = 'display: block; font-size: 11px; font-weight: 600; color: var(--traklet-text-secondary); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;';
     const fld = 'width: 100%; padding: 5px 8px; background: var(--traklet-bg); border-radius: var(--traklet-radius-md); border: 1px solid var(--traklet-border); color: var(--traklet-text); font-size: 12px; box-sizing: border-box;';
 
     return html`
       <div style="padding: var(--traklet-space-md); font-size: var(--traklet-font-size-sm);">
 
-        <!-- Identity (auto-detected from token) -->
-        ${identity ? html`
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: var(--traklet-space-sm); padding: 8px; background: rgba(22,163,74,0.06); border: 1px solid rgba(22,163,74,0.2); border-radius: var(--traklet-radius-md);">
-            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--traklet-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0;">
-              ${identity.name.charAt(0).toUpperCase()}
-            </div>
-            <div style="flex: 1; min-width: 0;">
-              <div style="font-size: 13px; font-weight: 600; color: var(--traklet-text);">${identity.name}</div>
-              <div style="font-size: 11px; color: var(--traklet-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${identity.email}</div>
-            </div>
-            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--traklet-success); flex-shrink: 0;"></span>
+        <!-- Identity card -->
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: var(--traklet-space-sm); padding: 8px; background: ${hasIdentity ? 'rgba(22,163,74,0.06)' : 'rgba(220,38,38,0.06)'}; border: 1px solid ${hasIdentity ? 'rgba(22,163,74,0.2)' : 'rgba(220,38,38,0.2)'}; border-radius: var(--traklet-radius-md);">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--traklet-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0;">
+            ${initial}
           </div>
-        ` : html`
-          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: var(--traklet-space-sm); padding: 5px 8px; background: rgba(220,38,38,0.06); border: 1px solid rgba(220,38,38,0.2); border-radius: var(--traklet-radius-md);">
-            <span style="width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--traklet-danger);"></span>
-            <span style="font-size: 12px; font-weight: 500;">Not identified. Enter your PAT token below.</span>
+          <div style="flex: 1; min-width: 0;">
+            ${hasIdentity ? html`
+              <div style="font-size: 13px; font-weight: 600; color: var(--traklet-text);">${savedName || 'Tester'}</div>
+              <div style="font-size: 11px; color: var(--traklet-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${savedEmail || 'Set your email below'}</div>
+            ` : html`
+              <div style="font-size: 12px; font-weight: 500; color: var(--traklet-text);">Enter your name below to get started.</div>
+            `}
           </div>
-        `}
+          <span style="width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: ${hasIdentity ? 'var(--traklet-success)' : 'var(--traklet-warning)'};"></span>
+        </div>
+
+        <!-- Your Name -->
+        <div style="margin-bottom: var(--traklet-space-sm);">
+          <label style="${lbl}">Your Name</label>
+          <input
+            type="text"
+            placeholder="e.g., Sarah Chen"
+            data-testid="traklet-input-name"
+            .value=${savedName}
+            style="${fld}"
+            @change=${(e: Event) => this.saveSetting('__traklet_user_name__', (e.target as HTMLInputElement).value)}
+          />
+        </div>
+
+        <!-- Your Email -->
+        <div style="margin-bottom: var(--traklet-space-sm);">
+          <label style="${lbl}">Your Email</label>
+          <input
+            type="email"
+            placeholder="you@company.com"
+            data-testid="traklet-input-email"
+            .value=${savedEmail}
+            style="${fld}"
+            @change=${(e: Event) => this.saveSetting('__traklet_user_email__', (e.target as HTMLInputElement).value)}
+          />
+          <div style="font-size: 10px; color: var(--traklet-text-muted); margin-top: 2px;">
+            Your name and email are attached to test results, comments, and issue updates so the team knows who tested what.
+          </div>
+        </div>
 
         <!-- Theme -->
         <div style="margin-bottom: var(--traklet-space-sm);">
@@ -1295,30 +1324,27 @@ export class TrakletWidget extends LitElement {
           </div>
         </div>
 
-        <!-- PAT Token -->
+        <!-- PAT Token (shared or personal) -->
         <div style="margin-bottom: var(--traklet-space-sm);">
-          <label style="${lbl}">Your PAT Token</label>
+          <label style="${lbl}">PAT Token</label>
           <input
             type="password"
-            placeholder="Paste your Personal Access Token"
+            placeholder="Shared team token or your personal PAT"
             data-testid="traklet-input-pat"
             .value=${savedToken}
             style="${fld} font-family: monospace;"
             @change=${(e: Event) => this.saveSetting('__traklet_pat__', (e.target as HTMLInputElement).value)}
           />
           <div style="font-size: 10px; color: var(--traklet-text-muted); margin-top: 2px;">
-            Each tester uses their own token. The backend identifies you automatically from it — no need to enter your name or email. Token is saved per-browser.
+            ${savedToken
+              ? 'Token saved. Persists across refreshes.'
+              : 'Can be a shared team token (set in code or .traklet/settings.json) or your personal PAT.'}
           </div>
         </div>
 
-        <!-- Multi-user explanation -->
-        <div style="padding: 6px 8px; background: rgba(9,105,218,0.05); border: 1px solid rgba(9,105,218,0.12); border-radius: var(--traklet-radius-md); font-size: 10px; color: var(--traklet-text-secondary); line-height: 1.5; margin-bottom: var(--traklet-space-sm);">
-          <strong>Multi-user:</strong> On shared servers, each tester's PAT token identifies them uniquely. Issues are filtered to your assignments by default, but you can see everyone's tests. Your identity persists in this browser even after cache clears.
-        </div>
-
-        <!-- Developer setup -->
-        <div style="padding: 6px 8px; background: var(--traklet-bg-secondary); border: 1px solid var(--traklet-border-muted); border-radius: var(--traklet-radius-md); font-size: 10px; color: var(--traklet-text-secondary); line-height: 1.5;">
-          <strong>Developers:</strong> Set token in code or <code style="font-size: 10px; background: var(--traklet-bg); padding: 1px 4px; border-radius: 3px;">.traklet/settings.json</code>
+        <!-- How it works -->
+        <div style="padding: 6px 8px; background: rgba(9,105,218,0.05); border: 1px solid rgba(9,105,218,0.12); border-radius: var(--traklet-radius-md); font-size: 10px; color: var(--traklet-text-secondary); line-height: 1.5;">
+          <strong>How identity works:</strong> The PAT token provides access to the backend. Your name and email (above) identify you on test results and comments. A shared PAT means everyone can access the same project — each tester is distinguished by their name/email, not their token.
         </div>
       </div>
     `;
