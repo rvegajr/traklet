@@ -454,7 +454,15 @@ export class TrakletIssueList extends LitElement {
   }
 
   private handleSelect(issueId: string) {
-    this.presenter?.selectIssue(issueId);
+    // Dispatch navigate event so widget's navigateTo('detail', { issueId }) is called,
+    // which properly loads the issue in the detail presenter
+    this.dispatchEvent(
+      new CustomEvent('navigate', {
+        detail: { view: 'detail', issueId },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 
   private handleLoadMore() {
