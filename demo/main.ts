@@ -1,129 +1,191 @@
 /**
- * Demo entry point - initializes Traklet with LocalStorage adapter
- * and seeds sample test case data for UX testing.
+ * Demo entry point
+ *
+ * Two modes:
+ * - Demo mode (no PAT): localStorage adapter with seeded medical test cases
+ * - Live mode (with PAT): Azure DevOps adapter connecting to real backend
+ *
+ * The PAT token is entered via the setup bar in the host page.
+ * Traklet.init() handles everything — widget auto-mounts.
  */
 
 import { Traklet } from '../src/Traklet';
 import { composeTestCaseBody } from '../src/core/TestCaseTemplate';
 import type { TrakletInstance } from '../src/Traklet';
+import type { TrakletConfig } from '../src/core';
 
-const PROJECT_ID = 'flight-deck';
+// Expose initTraklet globally so the HTML button can call it
+(window as unknown as Record<string, unknown>)['initTraklet'] = initTraklet;
 
-async function initDemo(): Promise<void> {
-  // That's it. Widget auto-mounts to document.body.
-  const instance = await Traklet.init({
-    adapter: 'localStorage',
-    projects: [
-      { id: PROJECT_ID, name: 'Flight Deck Pro', description: 'Main application' },
-    ],
-    user: {
-      email: 'tester@sji.com',
-      name: 'QA Tester',
-    },
-    position: 'bottom-right',
-  });
+async function initTraklet(): Promise<void> {
+  const patInput = document.getElementById('pat-input') as HTMLInputElement;
+  const statusEl = document.getElementById('connection-status') as HTMLElement;
+  const setupBar = document.getElementById('setup-bar') as HTMLElement;
+  const connectBtn = document.getElementById('connect-btn') as HTMLButtonElement;
 
-  // Seed sample data for the demo
-  await seedSampleData(instance);
+  const pat = patInput?.value.trim();
 
-  console.log('Traklet demo initialized.');
+  connectBtn.disabled = true;
+  statusEl.textContent = 'Connecting...';
+
+  try {
+    // Destroy previous instance if exists
+    Traklet.getInstance()?.destroy();
+
+    let config: TrakletConfig;
+
+    if (pat) {
+      // Live mode: connect to Azure DevOps with PAT
+      config = {
+        adapter: 'azure-devops',
+        token: pat,
+        baseUrl: 'https://dev.azure.com/sjiorg',
+        projects: [
+          { id: 'sji-flight-deck-pro', name: 'SJI Flight Deck Pro', identifier: 'sji-flight-deck-pro' },
+        ],
+        position: 'bottom-right',
+      };
+    } else {
+      // Demo mode: localStorage with seeded data
+      config = {
+        adapter: 'localStorage',
+        projects: [
+          { id: 'meditrack', name: 'MediTrack Pro' },
+        ],
+        user: {
+          email: 'dr.chen@meditrack.com',
+          name: 'Dr. Sarah Chen',
+        },
+        position: 'bottom-right',
+      };
+    }
+
+    const instance = await Traklet.init(config);
+
+    // Seed demo data if using localStorage
+    if (!pat) {
+      await seedMedicalTestCases(instance);
+    }
+
+    // Update UI
+    statusEl.textContent = pat ? 'Connected to Azure DevOps' : 'Demo mode (localStorage)';
+    setupBar.classList.toggle('setup-bar--connected', true);
+    connectBtn.textContent = 'Reconnect';
+    connectBtn.disabled = false;
+
+    console.log(`Traklet initialized in ${pat ? 'live' : 'demo'} mode.`);
+  } catch (error) {
+    statusEl.textContent = `Error: ${error instanceof Error ? error.message : String(error)}`;
+    connectBtn.disabled = false;
+    connectBtn.textContent = 'Retry';
+  }
 }
 
-async function seedSampleData(instance: TrakletInstance): Promise<void> {
+async function seedMedicalTestCases(instance: TrakletInstance): Promise<void> {
   const form = instance.getIssueFormPresenter();
 
-  const issues = [
+  const testCases = [
     {
-      title: 'TC-001: Verify flight status updates in real-time',
+      title: 'TC-101: Patient admission creates correct records',
       body: composeTestCaseBody({
-        objective: 'Confirm that flight status changes (On Time, Delayed, Boarding) update on the dashboard without requiring a page refresh.',
-        prerequisites: 'At least 3 active flights visible on the dashboard.',
+        objective: 'Verify that admitting a new patient creates all required records: demographic data, insurance info, room assignment, and attending physician.',
+        prerequisites: 'At least one available room in the system.',
         steps: [
-          'Open the Flight Deck dashboard',
-          'Note the current status of flight SJ-101',
-          'Wait 30 seconds or trigger a status change from the admin panel',
-          'Observe the dashboard for automatic updates',
+          'Click "+ New Patient" on the dashboard',
+          'Fill in demographics: name, DOB, MRN',
+          'Add insurance information',
+          'Assign room 302-A and attending Dr. Chen',
+          'Click "Admit Patient"',
         ],
-        expectedResult: 'Status pill updates within 5 seconds without page reload. No flickering or layout shift.',
+        expectedResult: 'Patient appears in the dashboard list with correct room, condition badge (Observation), and attending physician.',
       }),
-      labels: ['test-case'],
-      priority: 'high',
+      labels: ['test-case', 'admissions'],
+      priority: 'critical' as const,
     },
     {
-      title: 'TC-002: Export flight data to CSV',
+      title: 'TC-102: Lab results notification appears in activity feed',
       body: composeTestCaseBody({
-        objective: 'Verify that the CSV export includes all visible columns with correct headers and data matching the filtered view.',
-        prerequisites: 'Sample dataset loaded with at least 10 flights.\nUser has export permissions.',
+        objective: 'Verify that when lab results are ready, a notification appears in the activity feed within 30 seconds.',
+        depends: ['TC-101'],
         steps: [
-          'Navigate to the Flights page',
-          'Apply filter: Date Range = Last 7 Days',
-          'Click the Export button in the toolbar',
-          'Select CSV from the format dropdown',
-          'Click Download',
-          'Open the downloaded file',
+          'Admit a test patient (TC-101)',
+          'Submit a lab order for CBC panel',
+          'Mark lab results as complete in the lab system',
+          'Check the activity feed on the dashboard',
         ],
-        expectedResult: 'CSV file downloads immediately.\nHeaders match visible columns.\nData matches filtered view.',
+        expectedResult: 'Activity feed shows "Lab results ready for [Patient Name]" within 30 seconds. No page refresh required.',
       }),
-      labels: ['test-case'],
-      priority: 'medium',
+      labels: ['test-case', 'labs'],
+      priority: 'high' as const,
     },
     {
-      title: 'TC-003: Crew utilization percentage calculation',
+      title: 'TC-103: Prescription validation blocks dangerous interactions',
       body: composeTestCaseBody({
-        objective: 'Verify the crew utilization metric on the dashboard card matches the calculated value from the Crew Management page.',
+        objective: 'Verify that the system blocks prescriptions with known dangerous drug interactions and shows a clear warning.',
+        prerequisites: 'Patient with existing Warfarin prescription.',
         steps: [
-          'Note the Crew Utilization percentage on the dashboard',
-          'Navigate to Reports > Crew Management',
-          'Calculate: (assigned crew hours / total available hours) * 100',
-          'Compare with the dashboard value',
+          'Open patient Elena Vasquez (MRN-20843)',
+          'Navigate to Prescriptions tab',
+          'Attempt to add Aspirin 325mg daily',
+          'Observe the interaction warning',
         ],
-        expectedResult: 'Dashboard percentage matches the manual calculation within 0.5% margin.',
+        expectedResult: 'System displays a red warning: "Dangerous interaction: Warfarin + Aspirin increases bleeding risk." Prescription is not saved until physician overrides.',
       }),
-      labels: ['test-case'],
-      priority: 'low',
+      labels: ['test-case', 'prescriptions', 'safety'],
+      priority: 'critical' as const,
     },
     {
-      title: 'BUG: Delayed flight count includes cancelled flights',
-      body: 'The "Delayed" card on the dashboard shows 3, but one of those (SJ-900) was actually cancelled, not delayed.\n\nExpected: Cancelled flights should not count as delayed.\n\nhttps://jam.dev/c/sample-bug-recording',
-      labels: ['bug'],
-      priority: 'high',
+      title: 'TC-104: Vital signs chart renders correctly',
+      body: composeTestCaseBody({
+        objective: 'Verify that the vital signs chart displays heart rate, blood pressure, and temperature trends for the last 24 hours.',
+        steps: [
+          'Open patient Maria Gonzalez (MRN-20847)',
+          'Navigate to Vitals tab',
+          'Select "Last 24 hours" time range',
+          'Observe the chart rendering',
+        ],
+        expectedResult: 'Chart shows 3 data series (HR, BP, Temp) with correct axis labels. Data points are clickable and show exact values in a tooltip.',
+      }),
+      labels: ['test-case', 'vitals'],
+      priority: 'medium' as const,
     },
     {
-      title: 'TC-004: Dashboard loads within 3 seconds',
+      title: 'TC-105: Patient discharge updates all systems',
       body: composeTestCaseBody({
-        objective: 'Verify the dashboard fully renders (all cards + table) within 3 seconds on a standard connection.',
-        prerequisites: 'Clear browser cache.\nUse Chrome DevTools Network throttling set to "Fast 3G" for consistent results.',
+        objective: 'Verify that discharging a patient updates the room availability, removes them from active admissions count, and generates a discharge summary.',
+        depends: ['TC-101'],
         steps: [
-          'Open Chrome DevTools > Network tab',
-          'Set throttling to "Fast 3G"',
-          'Navigate to the Dashboard page',
-          'Observe the DOMContentLoaded and Load timings',
-          'Verify all 4 metric cards and the flights table are visible',
+          'Open patient Aisha Johnson (MRN-20839)',
+          'Click "Discharge Patient"',
+          'Complete the discharge form (diagnosis, follow-up instructions)',
+          'Confirm discharge',
+          'Check the dashboard stats',
         ],
-        expectedResult: 'DOMContentLoaded < 2s.\nFull load < 3s.\nAll content visible without scrolling on 1440x900.',
+        expectedResult: 'Active Admissions count decreases by 1. Room 215-B shows as available. Activity feed shows discharge event. Discharge summary PDF is generated.',
       }),
-      labels: ['test-case'],
-      priority: 'medium',
+      labels: ['test-case', 'discharge'],
+      priority: 'high' as const,
+    },
+    {
+      title: 'BUG: Pending Lab Results count includes completed results',
+      body: 'The "Pending Lab Results" card shows 23, but at least 4 of those were completed yesterday and should no longer be counted.\n\nSteps to reproduce:\n1. Look at the Pending Lab Results stat card\n2. Click through to the full lab results list\n3. Count the ones with status "Pending"\n\nExpected: Only truly pending results counted.\nActual: Includes completed results from the last 24 hours.\n\nhttps://jam.dev/c/meditrack-lab-bug',
+      labels: ['bug', 'labs'],
+      priority: 'high' as const,
     },
   ];
 
-  for (const issue of issues) {
+  for (const tc of testCases) {
     await form.initCreate();
-    form.updateField('title', issue.title);
-    form.updateField('body', issue.body);
-    if (issue.priority) {
-      form.updateField('priority', issue.priority);
-    }
-    if (issue.labels) {
-      form.updateField('labels', issue.labels);
-    }
+    form.updateField('title', tc.title);
+    form.updateField('body', tc.body);
+    form.updateField('priority', tc.priority);
+    form.updateField('labels', tc.labels);
     await form.submit();
   }
 
-  // Navigate back to list view and reload
   instance.getWidgetPresenter().navigateTo('list');
   await instance.getIssueListPresenter().loadIssues();
 }
 
-// Boot
-initDemo().catch(console.error);
+// Auto-init in demo mode on page load
+initTraklet().catch(console.error);

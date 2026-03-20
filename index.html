@@ -3,244 +3,488 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Traklet Demo - Host Application</title>
+  <title>MediTrack Pro - Patient Management</title>
   <style>
-    /* ============================================
-       Simulated host application styles.
-       Traklet must NOT interfere with any of this.
-       ============================================ */
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f0f2f5;
-      color: #1a1a2e;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
       min-height: 100vh;
     }
 
-    .app-nav {
-      background: #1a1a2e;
+    /* Nav */
+    .nav {
+      background: linear-gradient(90deg, #7c3aed 0%, #6d28d9 100%);
       color: white;
-      padding: 12px 24px;
+      padding: 0 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      height: 56px;
       position: sticky;
       top: 0;
       z-index: 100;
     }
 
-    .app-nav h1 {
-      font-size: 18px;
-      font-weight: 600;
-    }
-
-    .app-nav__links {
+    .nav__brand {
       display: flex;
-      gap: 16px;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 700;
     }
 
-    .app-nav__links a {
+    .nav__brand svg { opacity: 0.9; }
+
+    .nav__links {
+      display: flex;
+      gap: 4px;
+    }
+
+    .nav__links a {
       color: rgba(255,255,255,0.7);
       text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 14px;
+      border-radius: 6px;
+      transition: all 150ms;
+    }
+
+    .nav__links a:hover { background: rgba(255,255,255,0.1); color: white; }
+    .nav__links a.active { background: rgba(255,255,255,0.15); color: white; }
+
+    .nav__user {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .nav__avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
       font-size: 14px;
     }
 
-    .app-nav__links a:hover { color: white; }
-    .app-nav__links a.active { color: white; font-weight: 600; }
-
-    .app-content {
-      max-width: 960px;
-      margin: 32px auto;
-      padding: 0 24px;
+    /* Content */
+    .content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
     }
 
-    .page-title {
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .page-header h1 {
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .page-header__actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      background: white;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      color: #334155;
+    }
+
+    .btn--primary {
+      background: #7c3aed;
+      color: white;
+      border-color: #7c3aed;
+    }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .stat-card__label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .stat-card__value {
       font-size: 28px;
       font-weight: 700;
-      margin-bottom: 8px;
+      color: #0f172a;
     }
 
-    .page-subtitle {
-      color: #666;
-      margin-bottom: 24px;
-      font-size: 15px;
-    }
-
-    /* Cards grid (simulated dashboard) */
-    .card-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
-      margin-bottom: 32px;
-    }
-
-    .card {
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-      border: 1px solid #e5e7eb;
-    }
-
-    .card h3 {
-      font-size: 14px;
-      color: #666;
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
-
-    .card .value {
-      font-size: 32px;
-      font-weight: 700;
-    }
-
-    .card .trend {
-      font-size: 13px;
+    .stat-card__change {
+      font-size: 12px;
       margin-top: 4px;
     }
 
-    .card .trend--up { color: #16a34a; }
-    .card .trend--down { color: #dc2626; }
+    .stat-card__change--up { color: #16a34a; }
+    .stat-card__change--down { color: #dc2626; }
 
-    /* Data table */
-    .data-table {
-      width: 100%;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-      border: 1px solid #e5e7eb;
+    /* Two-column layout */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
     }
 
-    .data-table table {
+    /* Patients table */
+    .card {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+    }
+
+    .card__header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card__header h2 {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .table {
       width: 100%;
       border-collapse: collapse;
     }
 
-    .data-table th {
-      background: #f9fafb;
-      padding: 12px 16px;
+    .table th {
       text-align: left;
-      font-size: 12px;
+      padding: 10px 20px;
+      font-size: 11px;
       font-weight: 600;
-      color: #666;
+      color: #64748b;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      border-bottom: 1px solid #e5e7eb;
+      background: #f8fafc;
+      border-bottom: 1px solid #f1f5f9;
     }
 
-    .data-table td {
-      padding: 12px 16px;
-      font-size: 14px;
-      border-bottom: 1px solid #f3f4f6;
+    .table td {
+      padding: 12px 20px;
+      font-size: 13px;
+      border-bottom: 1px solid #f8fafc;
     }
 
-    .data-table tr:hover td {
-      background: #f9fafb;
+    .table tr:hover td { background: #fafbfc; }
+
+    .patient-name {
+      font-weight: 600;
+      color: #0f172a;
     }
 
-    .status-pill {
+    .patient-id {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .badge {
       display: inline-block;
       padding: 2px 10px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 500;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 600;
     }
 
-    .status-pill--active { background: #dcfce7; color: #16a34a; }
-    .status-pill--pending { background: #fef3c7; color: #d97706; }
-    .status-pill--delayed { background: #fee2e2; color: #dc2626; }
+    .badge--stable { background: #dcfce7; color: #166534; }
+    .badge--critical { background: #fee2e2; color: #991b1b; }
+    .badge--recovery { background: #e0f2fe; color: #075985; }
+    .badge--observation { background: #fef3c7; color: #92400e; }
 
-    /* Footer */
-    .app-footer {
-      text-align: center;
-      padding: 32px;
-      color: #999;
+    /* Sidebar */
+    .activity-item {
+      padding: 14px 20px;
+      border-bottom: 1px solid #f1f5f9;
       font-size: 13px;
     }
 
-    .section-title {
-      font-size: 18px;
+    .activity-item:last-child { border-bottom: none; }
+
+    .activity-item__time {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .activity-item__action {
+      color: #334155;
+    }
+
+    .activity-item__highlight {
       font-weight: 600;
-      margin-bottom: 16px;
+      color: #7c3aed;
+    }
+
+    /* PAT token setup bar */
+    .setup-bar {
+      background: #fffbeb;
+      border-bottom: 1px solid #fde68a;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: #92400e;
+    }
+
+    .setup-bar__label {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .setup-bar__input {
+      flex: 1;
+      max-width: 400px;
+      padding: 6px 12px;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: monospace;
+      background: white;
+    }
+
+    .setup-bar__input:focus {
+      outline: none;
+      border-color: #7c3aed;
+    }
+
+    .setup-bar__btn {
+      padding: 6px 16px;
+      background: #7c3aed;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .setup-bar__btn:hover { background: #6d28d9; }
+
+    .setup-bar__status {
+      font-size: 12px;
+      color: #16a34a;
+      font-weight: 500;
+    }
+
+    .setup-bar--connected {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+      color: #166534;
     }
   </style>
 </head>
 <body>
-  <!-- ============================================
-       Simulated host application (Flight Deck Pro)
-       ============================================ -->
-  <nav class="app-nav">
-    <h1>SJI Flight Deck Pro</h1>
-    <div class="app-nav__links">
+
+  <nav class="nav">
+    <div class="nav__brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      MediTrack Pro
+    </div>
+    <div class="nav__links">
       <a href="#" class="active">Dashboard</a>
-      <a href="#">Flights</a>
-      <a href="#">Reports</a>
-      <a href="#">Settings</a>
+      <a href="#">Patients</a>
+      <a href="#">Appointments</a>
+      <a href="#">Lab Results</a>
+      <a href="#">Prescriptions</a>
+    </div>
+    <div class="nav__user">
+      <span>Dr. Sarah Chen</span>
+      <div class="nav__avatar">SC</div>
     </div>
   </nav>
 
-  <main class="app-content">
-    <h2 class="page-title">Dashboard</h2>
-    <p class="page-subtitle">Flight operations overview for today</p>
+  <!-- PAT Token Setup -->
+  <div class="setup-bar" id="setup-bar">
+    <span class="setup-bar__label">Traklet:</span>
+    <input
+      class="setup-bar__input"
+      id="pat-input"
+      type="password"
+      placeholder="Paste Azure DevOps PAT token (or leave blank for demo mode)"
+    />
+    <button class="setup-bar__btn" id="connect-btn" onclick="initTraklet()">Connect</button>
+    <span class="setup-bar__status" id="connection-status"></span>
+  </div>
 
-    <div class="card-grid">
-      <div class="card">
-        <h3>Active Flights</h3>
-        <div class="value">24</div>
-        <div class="trend trend--up">+3 from yesterday</div>
-      </div>
-      <div class="card">
-        <h3>On-Time Rate</h3>
-        <div class="value">94.2%</div>
-        <div class="trend trend--up">+1.5% this week</div>
-      </div>
-      <div class="card">
-        <h3>Delayed</h3>
-        <div class="value">3</div>
-        <div class="trend trend--down">2 weather-related</div>
-      </div>
-      <div class="card">
-        <h3>Crew Utilization</h3>
-        <div class="value">87%</div>
-        <div class="trend trend--up">Within target</div>
+  <main class="content">
+    <div class="page-header">
+      <h1>Patient Dashboard</h1>
+      <div class="page-header__actions">
+        <button class="btn">Export</button>
+        <button class="btn btn--primary">+ New Patient</button>
       </div>
     </div>
 
-    <h3 class="section-title">Today's Flights</h3>
-    <div class="data-table">
-      <table>
-        <thead>
-          <tr>
-            <th>Flight</th>
-            <th>Route</th>
-            <th>Departure</th>
-            <th>Status</th>
-            <th>Aircraft</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td>SJ-101</td><td>DFW - LAX</td><td>06:30</td><td><span class="status-pill status-pill--active">On Time</span></td><td>N821SJ</td></tr>
-          <tr><td>SJ-204</td><td>LAX - SFO</td><td>08:15</td><td><span class="status-pill status-pill--active">On Time</span></td><td>N834SJ</td></tr>
-          <tr><td>SJ-312</td><td>SFO - SEA</td><td>09:45</td><td><span class="status-pill status-pill--pending">Boarding</span></td><td>N812SJ</td></tr>
-          <tr><td>SJ-405</td><td>DFW - MIA</td><td>10:00</td><td><span class="status-pill status-pill--delayed">Delayed 45m</span></td><td>N845SJ</td></tr>
-          <tr><td>SJ-118</td><td>MIA - ATL</td><td>11:30</td><td><span class="status-pill status-pill--active">On Time</span></td><td>N867SJ</td></tr>
-          <tr><td>SJ-522</td><td>ATL - ORD</td><td>13:00</td><td><span class="status-pill status-pill--pending">Scheduled</span></td><td>N891SJ</td></tr>
-          <tr><td>SJ-633</td><td>ORD - DEN</td><td>14:30</td><td><span class="status-pill status-pill--delayed">Delayed 20m</span></td><td>N823SJ</td></tr>
-          <tr><td>SJ-741</td><td>DEN - PHX</td><td>16:00</td><td><span class="status-pill status-pill--active">On Time</span></td><td>N856SJ</td></tr>
-        </tbody>
-      </table>
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-card__label">Total Patients</div>
+        <div class="stat-card__value">1,284</div>
+        <div class="stat-card__change stat-card__change--up">+12 this week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__label">Active Admissions</div>
+        <div class="stat-card__value">89</div>
+        <div class="stat-card__change stat-card__change--down">-3 from yesterday</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__label">Appointments Today</div>
+        <div class="stat-card__value">47</div>
+        <div class="stat-card__change stat-card__change--up">+5 from avg</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__label">Pending Lab Results</div>
+        <div class="stat-card__value">23</div>
+        <div class="stat-card__change stat-card__change--down">6 critical</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card__header">
+          <h2>Recent Patients</h2>
+          <button class="btn" style="font-size: 12px; padding: 4px 12px;">View All</button>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Patient</th>
+              <th>Room</th>
+              <th>Condition</th>
+              <th>Attending</th>
+              <th>Admitted</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div class="patient-name">Maria Gonzalez</div><div class="patient-id">MRN-20847</div></td>
+              <td>302-A</td>
+              <td><span class="badge badge--stable">Stable</span></td>
+              <td>Dr. Chen</td>
+              <td>Mar 18</td>
+            </tr>
+            <tr>
+              <td><div class="patient-name">James Whitfield</div><div class="patient-id">MRN-20851</div></td>
+              <td>ICU-4</td>
+              <td><span class="badge badge--critical">Critical</span></td>
+              <td>Dr. Patel</td>
+              <td>Mar 19</td>
+            </tr>
+            <tr>
+              <td><div class="patient-name">Aisha Johnson</div><div class="patient-id">MRN-20839</div></td>
+              <td>215-B</td>
+              <td><span class="badge badge--recovery">Recovery</span></td>
+              <td>Dr. Chen</td>
+              <td>Mar 15</td>
+            </tr>
+            <tr>
+              <td><div class="patient-name">Robert Kim</div><div class="patient-id">MRN-20855</div></td>
+              <td>108-A</td>
+              <td><span class="badge badge--observation">Observation</span></td>
+              <td>Dr. Rivera</td>
+              <td>Mar 20</td>
+            </tr>
+            <tr>
+              <td><div class="patient-name">Elena Vasquez</div><div class="patient-id">MRN-20843</div></td>
+              <td>301-C</td>
+              <td><span class="badge badge--stable">Stable</span></td>
+              <td>Dr. Patel</td>
+              <td>Mar 17</td>
+            </tr>
+            <tr>
+              <td><div class="patient-name">David Okonkwo</div><div class="patient-id">MRN-20858</div></td>
+              <td>410-B</td>
+              <td><span class="badge badge--recovery">Recovery</span></td>
+              <td>Dr. Chen</td>
+              <td>Mar 16</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card__header">
+          <h2>Activity</h2>
+        </div>
+        <div class="activity-item">
+          <div class="activity-item__action">
+            Lab results ready for <span class="activity-item__highlight">James Whitfield</span>
+          </div>
+          <div class="activity-item__time">2 minutes ago</div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-item__action">
+            <span class="activity-item__highlight">Maria Gonzalez</span> vitals updated
+          </div>
+          <div class="activity-item__time">15 minutes ago</div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-item__action">
+            New admission: <span class="activity-item__highlight">Robert Kim</span>
+          </div>
+          <div class="activity-item__time">1 hour ago</div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-item__action">
+            Prescription updated for <span class="activity-item__highlight">Aisha Johnson</span>
+          </div>
+          <div class="activity-item__time">2 hours ago</div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-item__action">
+            <span class="activity-item__highlight">Elena Vasquez</span> discharge planned
+          </div>
+          <div class="activity-item__time">3 hours ago</div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-item__action">
+            Room transfer: <span class="activity-item__highlight">David Okonkwo</span> to 410-B
+          </div>
+          <div class="activity-item__time">4 hours ago</div>
+        </div>
+      </div>
     </div>
   </main>
 
-  <footer class="app-footer">
-    SJI Flight Deck Pro v2.4.1 | Traklet widget is injected below - it should not affect this page.
-  </footer>
-
-  <!-- ============================================
-       Traklet widget injection
-       ============================================ -->
   <script type="module" src="/demo/main.ts"></script>
 </body>
 </html>
