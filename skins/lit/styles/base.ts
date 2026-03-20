@@ -31,7 +31,7 @@ export const baseStyles = css`
     /* Spacing */
     --traklet-space-xs: 4px;
     --traklet-space-sm: 8px;
-    --traklet-space-md: 16px;
+    --traklet-space-md: 12px;
     --traklet-space-lg: 24px;
     --traklet-space-xl: 32px;
 

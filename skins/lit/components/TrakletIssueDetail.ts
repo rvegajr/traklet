@@ -40,9 +40,9 @@ export class TrakletIssueDetail extends LitElement {
       }
 
       .detail-header__title {
-        font-size: var(--traklet-font-size-lg);
+        font-size: 15px;
         font-weight: 600;
-        margin: 0 0 var(--traklet-space-sm) 0;
+        margin: 0 0 4px 0;
         color: var(--traklet-text);
         line-height: 1.3;
       }
@@ -122,8 +122,8 @@ export class TrakletIssueDetail extends LitElement {
       }
 
       .section {
-        margin-bottom: var(--traklet-space-lg);
-        scroll-margin-top: var(--traklet-space-md);
+        margin-bottom: var(--traklet-space-md);
+        scroll-margin-top: var(--traklet-space-sm);
       }
 
       .section:last-child {
@@ -138,7 +138,7 @@ export class TrakletIssueDetail extends LitElement {
       }
 
       .section__title {
-        font-size: var(--traklet-font-size-md);
+        font-size: var(--traklet-font-size-sm);
         font-weight: 600;
         color: var(--traklet-text);
         margin: 0;

@@ -62,7 +62,7 @@ export class TrakletIssueForm extends LitElement {
       }
 
       .form__textarea {
-        min-height: 120px;
+        min-height: 80px;
         resize: vertical;
         line-height: 1.5;
       }

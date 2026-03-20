@@ -105,7 +105,7 @@ export class TrakletTestRunView extends LitElement {
       /* Start run form */
       .start-run {
         text-align: center;
-        padding: var(--traklet-space-xl) var(--traklet-space-md);
+        padding: var(--traklet-space-md);
       }
 
       .start-run__title {

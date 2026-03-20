@@ -252,7 +252,7 @@ export class TrakletWidget extends LitElement {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 10px var(--traklet-space-md);
+        padding: 6px var(--traklet-space-md);
         border-bottom: none;
         background: linear-gradient(135deg, #0969da 0%, #1a7f37 100%);
         color: white;
@@ -293,11 +293,16 @@ export class TrakletWidget extends LitElement {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 6px var(--traklet-space-md);
+        padding: 4px var(--traklet-space-md);
         border-top: 2px solid var(--traklet-primary);
         background: var(--traklet-bg-secondary);
-        font-size: var(--traklet-font-size-xs);
+        font-size: 11px;
         color: var(--traklet-text-muted);
+      }
+
+      .panel__footer-brand {
+        font-weight: 600;
+        color: var(--traklet-text-secondary);
       }
 
       .panel__project-select {
@@ -443,6 +448,7 @@ export class TrakletWidget extends LitElement {
   @state() declare private isResizing: boolean;
   @state() declare private snapIndicator: 'left' | 'right' | null;
   @state() declare private showRunsView: boolean;
+  @state() declare private showSettingsView: boolean;
 
   constructor() {
     super();
@@ -459,6 +465,7 @@ export class TrakletWidget extends LitElement {
     this.isResizing = false;
     this.snapIndicator = null;
     this.showRunsView = false;
+    this.showSettingsView = false;
   }
 
   private unsubscribeViewState?: () => void;
@@ -628,6 +635,16 @@ export class TrakletWidget extends LitElement {
         <div class="panel__actions">
           <button
             class="btn-icon"
+            data-testid="traklet-btn-settings"
+            aria-label="Settings"
+            title="Settings"
+            @click=${() => { this.showSettingsView = !this.showSettingsView; this.showRunsView = false; }}
+            style="${this.showSettingsView ? 'color: var(--traklet-primary); background: rgba(255,255,255,0.2);' : ''}"
+          >
+            ${this.renderGearIcon()}
+          </button>
+          <button
+            class="btn-icon"
             data-testid="traklet-btn-runs"
             aria-label="${this.showRunsView ? 'Issues' : 'Test Runs'}"
             title="${this.showRunsView ? 'Back to Issues' : 'Test Runs'}"
@@ -658,6 +675,9 @@ export class TrakletWidget extends LitElement {
   }
 
   private renderBody() {
+    if (this.showSettingsView) {
+      return this.renderSettings();
+    }
     if (this.showRunsView) {
       return html`<traklet-test-run-view></traklet-test-run-view>`;
     }
@@ -701,6 +721,7 @@ export class TrakletWidget extends LitElement {
 
     return html`
       <div class="panel__footer">
+        <span class="panel__footer-brand">Traklet</span>
         <div class="status-indicator">
           <span class="status-dot ${presenter?.isOnline() ? '' : 'status-dot--offline'}"></span>
           ${presenter?.isOnline() ? 'Connected' : 'Offline'}
@@ -727,12 +748,13 @@ export class TrakletWidget extends LitElement {
   }
 
   private getTitle(): string {
-    if (this.showRunsView) return 'Test Runs';
+    if (this.showSettingsView) return 'Traklet - Settings';
+    if (this.showRunsView) return 'Traklet - Test Runs';
     switch (this.viewState) {
-      case 'list': return 'Issues';
-      case 'detail': return 'Details';
-      case 'create': return 'New Issue';
-      case 'edit': return 'Edit Issue';
+      case 'list': return 'Traklet - Issues';
+      case 'detail': return 'Traklet - Details';
+      case 'create': return 'Traklet - New Issue';
+      case 'edit': return 'Traklet - Edit Issue';
       default: return 'Traklet';
     }
   }
@@ -1106,6 +1128,73 @@ export class TrakletWidget extends LitElement {
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="23 4 23 10 17 10"/>
         <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+    `;
+  }
+
+  private renderSettings() {
+    const isConnected = this.instance?.getWidgetPresenter()?.isConnected() ?? false;
+    const savedToken = this.getSavedToken();
+    const labelStyle = 'display: block; font-size: 11px; font-weight: 600; color: var(--traklet-text-secondary); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;';
+    const fieldStyle = 'padding: 6px 8px; background: var(--traklet-bg-secondary); border-radius: var(--traklet-radius-md); border: 1px solid var(--traklet-border-muted); color: var(--traklet-text); font-size: 13px;';
+
+    return html`
+      <div style="padding: var(--traklet-space-md); font-size: var(--traklet-font-size-sm);">
+        <div style="margin-bottom: var(--traklet-space-sm);">
+          <label style="${labelStyle}">Status</label>
+          <div style="display: flex; align-items: center; gap: 6px; ${fieldStyle}">
+            <span style="width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: ${isConnected ? 'var(--traklet-success)' : 'var(--traklet-danger)'};"></span>
+            ${isConnected ? 'Connected' : 'Disconnected'}
+            ${this.currentProject ? html` &middot; ${this.currentProject.name}` : nothing}
+          </div>
+        </div>
+
+        <div style="margin-bottom: var(--traklet-space-sm);">
+          <label style="${labelStyle}">PAT Token</label>
+          <div style="display: flex; gap: 4px;">
+            <input
+              type="password"
+              placeholder="Paste PAT token here"
+              data-testid="traklet-input-pat"
+              .value=${savedToken}
+              style="flex: 1; ${fieldStyle} font-family: monospace; font-size: 12px;"
+              @change=${(e: Event) => this.saveToken((e.target as HTMLInputElement).value)}
+            />
+          </div>
+          <div style="font-size: 11px; color: var(--traklet-text-muted); margin-top: 2px;">
+            ${savedToken ? 'Token saved locally.' : 'Stored in localStorage for this browser.'}
+          </div>
+        </div>
+
+        <div style="padding: 6px 8px; background: rgba(9, 105, 218, 0.06); border: 1px solid rgba(9, 105, 218, 0.15); border-radius: var(--traklet-radius-md); font-size: 11px; color: var(--traklet-text-secondary); line-height: 1.5;">
+          <strong>Setup in code:</strong><br/>
+          <code style="background: var(--traklet-bg-secondary); padding: 1px 4px; border-radius: 3px; font-size: 11px;">Traklet.init({ adapter: 'azure-devops', token: 'PAT', baseUrl: '...', projects: [...] })</code>
+        </div>
+      </div>
+    `;
+  }
+
+  private getSavedToken(): string {
+    try {
+      return localStorage.getItem('__traklet_pat__') ?? '';
+    } catch { return ''; }
+  }
+
+  private saveToken(token: string): void {
+    try {
+      if (token.trim()) {
+        localStorage.setItem('__traklet_pat__', token.trim());
+      } else {
+        localStorage.removeItem('__traklet_pat__');
+      }
+    } catch { /* localStorage unavailable */ }
+  }
+
+  private renderGearIcon() {
+    return html`
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
       </svg>
     `;
   }

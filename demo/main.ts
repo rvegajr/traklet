@@ -12,73 +12,22 @@
 import { Traklet } from '../src/Traklet';
 import { composeTestCaseBody } from '../src/core/TestCaseTemplate';
 import type { TrakletInstance } from '../src/Traklet';
-import type { TrakletConfig } from '../src/core';
-
-// Expose initTraklet globally so the HTML button can call it
-(window as unknown as Record<string, unknown>)['initTraklet'] = initTraklet;
 
 async function initTraklet(): Promise<void> {
-  const patInput = document.getElementById('pat-input') as HTMLInputElement;
-  const statusEl = document.getElementById('connection-status') as HTMLElement;
-  const setupBar = document.getElementById('setup-bar') as HTMLElement;
-  const connectBtn = document.getElementById('connect-btn') as HTMLButtonElement;
+  const instance = await Traklet.init({
+    adapter: 'localStorage',
+    projects: [
+      { id: 'meditrack', name: 'MediTrack Pro' },
+    ],
+    user: {
+      email: 'dr.chen@meditrack.com',
+      name: 'Dr. Sarah Chen',
+    },
+    position: 'bottom-right',
+  });
 
-  const pat = patInput?.value.trim();
-
-  connectBtn.disabled = true;
-  statusEl.textContent = 'Connecting...';
-
-  try {
-    // Destroy previous instance if exists
-    Traklet.getInstance()?.destroy();
-
-    let config: TrakletConfig;
-
-    if (pat) {
-      // Live mode: connect to Azure DevOps with PAT
-      config = {
-        adapter: 'azure-devops',
-        token: pat,
-        baseUrl: 'https://dev.azure.com/sjiorg',
-        projects: [
-          { id: 'sji-flight-deck-pro', name: 'SJI Flight Deck Pro', identifier: 'sji-flight-deck-pro' },
-        ],
-        position: 'bottom-right',
-      };
-    } else {
-      // Demo mode: localStorage with seeded data
-      config = {
-        adapter: 'localStorage',
-        projects: [
-          { id: 'meditrack', name: 'MediTrack Pro' },
-        ],
-        user: {
-          email: 'dr.chen@meditrack.com',
-          name: 'Dr. Sarah Chen',
-        },
-        position: 'bottom-right',
-      };
-    }
-
-    const instance = await Traklet.init(config);
-
-    // Seed demo data if using localStorage
-    if (!pat) {
-      await seedMedicalTestCases(instance);
-    }
-
-    // Update UI
-    statusEl.textContent = pat ? 'Connected to Azure DevOps' : 'Demo mode (localStorage)';
-    setupBar.classList.toggle('setup-bar--connected', true);
-    connectBtn.textContent = 'Reconnect';
-    connectBtn.disabled = false;
-
-    console.log(`Traklet initialized in ${pat ? 'live' : 'demo'} mode.`);
-  } catch (error) {
-    statusEl.textContent = `Error: ${error instanceof Error ? error.message : String(error)}`;
-    connectBtn.disabled = false;
-    connectBtn.textContent = 'Retry';
-  }
+  await seedMedicalTestCases(instance);
+  console.log('Traklet demo initialized. Click the icon to open, gear icon for settings.');
 }
 
 async function seedMedicalTestCases(instance: TrakletInstance): Promise<void> {

@@ -66,8 +66,8 @@ export class TrakletIssueList extends LitElement {
       .issue-item {
         display: flex;
         align-items: flex-start;
-        gap: var(--traklet-space-md);
-        padding: var(--traklet-space-md);
+        gap: 10px;
+        padding: var(--traklet-space-sm) var(--traklet-space-md);
         border-bottom: 1px solid var(--traklet-border-muted);
         cursor: pointer;
         transition: background var(--traklet-transition-fast);
