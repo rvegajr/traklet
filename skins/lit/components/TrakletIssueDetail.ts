@@ -145,8 +145,8 @@ export class TrakletIssueDetail extends LitElement {
       }
 
       .section__badge {
-        font-size: var(--traklet-font-size-xs);
-        padding: 2px 8px;
+        font-size: 10px;
+        padding: 1px 6px;
         border-radius: var(--traklet-radius-full);
         font-weight: 500;
       }
@@ -162,12 +162,12 @@ export class TrakletIssueDetail extends LitElement {
       }
 
       .section__content {
-        padding: var(--traklet-space-md);
+        padding: var(--traklet-space-sm) var(--traklet-space-md);
         background: var(--traklet-bg-secondary);
         border-radius: var(--traklet-radius-md);
         border: 1px solid var(--traklet-border-muted);
-        font-size: var(--traklet-font-size-sm);
-        line-height: 1.6;
+        font-size: 13px;
+        line-height: 1.5;
         white-space: pre-wrap;
         word-wrap: break-word;
       }
@@ -176,6 +176,27 @@ export class TrakletIssueDetail extends LitElement {
         border-color: var(--traklet-primary);
         border-style: dashed;
         background: var(--traklet-bg);
+      }
+
+      /* Steps section - clear numbered layout */
+      .section__content ol {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .section__content ol li {
+        margin-bottom: 4px;
+        padding-left: 4px;
+      }
+
+      /* Expected result - highlighted for visibility */
+      .section--expected .section__content {
+        border-left: 3px solid var(--traklet-success);
+      }
+
+      /* Actual result - highlighted differently */
+      .section--actual .section__content {
+        border-left: 3px solid var(--traklet-primary);
       }
 
       .section__content ol,
@@ -668,9 +689,11 @@ export class TrakletIssueDetail extends LitElement {
   private renderSection(section: TestCaseSection) {
     const isEditing = this.editingSectionId === section.id;
 
+    const roleClass = section.role === 'expected' ? 'section--expected' : section.role === 'actual-result' ? 'section--actual' : '';
+
     return html`
       <div
-        class="section"
+        class="section ${roleClass}"
         id="section-${section.id}"
         data-testid="traklet-section-${section.id}"
       >

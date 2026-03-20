@@ -38,7 +38,8 @@ export class TrakletIssueList extends LitElement {
       .issue-list__filters {
         display: flex;
         align-items: center;
-        gap: var(--traklet-space-sm);
+        gap: 4px;
+        flex-wrap: wrap;
       }
 
       .issue-list__search {
@@ -65,9 +66,9 @@ export class TrakletIssueList extends LitElement {
 
       .issue-item {
         display: flex;
-        align-items: flex-start;
-        gap: 10px;
-        padding: var(--traklet-space-sm) var(--traklet-space-md);
+        align-items: center;
+        gap: 8px;
+        padding: 6px var(--traklet-space-md);
         border-bottom: 1px solid var(--traklet-border-muted);
         cursor: pointer;
         transition: background var(--traklet-transition-fast);
@@ -79,61 +80,80 @@ export class TrakletIssueList extends LitElement {
 
       .issue-item__icon {
         flex-shrink: 0;
-        margin-top: 2px;
       }
 
-      .issue-item__icon--open {
-        color: var(--traklet-open);
-      }
-
-      .issue-item__icon--closed {
-        color: var(--traklet-closed);
-      }
+      .issue-item__icon--open { color: var(--traklet-open); }
+      .issue-item__icon--closed { color: var(--traklet-closed); }
 
       .issue-item__content {
         flex: 1;
         min-width: 0;
       }
 
-      .issue-item__title {
+      .issue-item__row {
         display: flex;
-        align-items: center;
-        gap: var(--traklet-space-sm);
-        margin: 0;
-        font-size: var(--traklet-font-size-sm);
-        font-weight: 600;
-        color: var(--traklet-text);
-      }
-
-      .issue-item__title:hover {
-        color: var(--traklet-primary);
+        align-items: baseline;
+        gap: 6px;
       }
 
       .issue-item__number {
-        font-weight: 400;
+        font-size: 11px;
+        font-weight: 500;
         color: var(--traklet-text-muted);
+        flex-shrink: 0;
       }
 
-      .issue-item__labels {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
-        margin-top: var(--traklet-space-xs);
+      .issue-item__title {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--traklet-text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
+
+      .issue-item:hover .issue-item__title {
+        color: var(--traklet-primary);
+      }
+
+      .issue-item__priority {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .issue-item__priority--critical { background: #dc2626; }
+      .issue-item__priority--high { background: #f97316; }
+      .issue-item__priority--medium { background: #eab308; }
+      .issue-item__priority--low { background: #22c55e; }
 
       .issue-item__meta {
         display: flex;
         align-items: center;
-        gap: var(--traklet-space-sm);
-        margin-top: var(--traklet-space-xs);
-        font-size: var(--traklet-font-size-xs);
+        gap: 6px;
+        font-size: 11px;
         color: var(--traklet-text-muted);
+        margin-top: 1px;
+      }
+
+      .issue-item__labels {
+        display: inline-flex;
+        gap: 3px;
+      }
+
+      .issue-item__label-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
       }
 
       .issue-item__comments {
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: 2px;
       }
 
       .filter-btn {
@@ -308,37 +328,24 @@ export class TrakletIssueList extends LitElement {
           ${issue.state === 'open' ? this.renderOpenIcon() : this.renderClosedIcon()}
         </div>
         <div class="issue-item__content">
-          <h3 class="issue-item__title">
-            ${issue.title}
+          <div class="issue-item__row">
             <span class="issue-item__number">#${issue.number}</span>
-          </h3>
-          ${issue.labels.length > 0
-            ? html`
-                <div class="issue-item__labels">
-                  ${issue.labels.map(
-                    (label) => html`
-                      <span
-                        class="traklet-label-badge"
-                        style="background: ${label.color}20; color: ${label.color}"
-                      >
-                        ${label.name}
-                      </span>
-                    `
-                  )}
-                </div>
-              `
-            : null}
+            ${issue.priority
+              ? html`<span class="issue-item__priority issue-item__priority--${issue.priority}" title="${issue.priority}"></span>`
+              : nothing}
+            <h3 class="issue-item__title">${issue.title}</h3>
+          </div>
           <div class="issue-item__meta">
-            <span>by ${issue.authorName}</span>
+            <span>${issue.authorName}</span>
             <span>${issue.updatedAt}</span>
+            ${issue.labels.length > 0
+              ? html`<span class="issue-item__labels">${issue.labels.map(
+                  (label) => html`<span class="issue-item__label-dot" style="background: ${label.color}" title="${label.name}"></span>`
+                )}</span>`
+              : nothing}
             ${issue.commentCount > 0
-              ? html`
-                  <span class="issue-item__comments">
-                    ${this.renderCommentIcon()}
-                    ${issue.commentCount}
-                  </span>
-                `
-              : null}
+              ? html`<span class="issue-item__comments">${this.renderCommentIcon()} ${issue.commentCount}</span>`
+              : nothing}
           </div>
         </div>
       </li>
