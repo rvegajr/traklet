@@ -32,7 +32,7 @@
   },
   "homepage": "https://github.com/user/traklet#readme",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 8888",
     "build": "tsc && vite build",
     "build:types": "tsc --emitDeclarationOnly",
     "preview": "vite preview",

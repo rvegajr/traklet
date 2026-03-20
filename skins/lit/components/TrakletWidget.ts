@@ -745,6 +745,10 @@ export class TrakletWidget extends LitElement {
     this.instance?.open();
     this.isOpen = true;
     this.isClosing = false;
+    // Restore snap mode attribute if panel was snapped before closing
+    if (this.panelMode !== 'floating') {
+      this.setAttribute('data-snap-mode', this.panelMode);
+    }
   }
 
   private handleClose() {
@@ -756,6 +760,8 @@ export class TrakletWidget extends LitElement {
       this.isClosing = false;
       this.isOpen = false;
       this.instance?.close();
+      // Remove snap mode so anchor icon can be positioned freely
+      this.removeAttribute('data-snap-mode');
     }
   }
 

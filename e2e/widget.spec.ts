@@ -25,23 +25,23 @@ test.describe('Traklet Widget - Host Page Isolation', () => {
 
   test('host page renders independently of widget', async ({ page }) => {
     // Host app elements should be visible
-    await expect(page.locator('.app-nav h1')).toHaveText('SJI Flight Deck Pro');
-    await expect(page.locator('.page-title')).toHaveText('Dashboard');
-    await expect(page.locator('.card-grid .card')).toHaveCount(4);
-    await expect(page.locator('.data-table tbody tr')).toHaveCount(8);
+    await expect(page.locator('.nav__brand')).toContainText('MediTrack Pro');
+    await expect(page.locator('.page-header h1')).toHaveText('Patient Dashboard');
+    await expect(page.locator('.stats .stat-card')).toHaveCount(4);
+    await expect(page.locator('.table tbody tr')).toHaveCount(6);
   });
 
   test('widget does not inject global styles', async ({ page }) => {
     // Verify host app styles are not affected by Traklet
-    const cardBg = await page.locator('.card').first().evaluate(
+    const cardBg = await page.locator('.stat-card').first().evaluate(
       (el) => getComputedStyle(el).backgroundColor
     );
     expect(cardBg).toBe('rgb(255, 255, 255)'); // white
 
-    const navBg = await page.locator('.app-nav').evaluate(
-      (el) => getComputedStyle(el).backgroundColor
+    const navBg = await page.locator('.nav').evaluate(
+      (el) => getComputedStyle(el).backgroundImage
     );
-    expect(navBg).toBe('rgb(26, 26, 46)'); // #1a1a2e
+    expect(navBg).toContain('gradient'); // purple gradient
   });
 });
 
