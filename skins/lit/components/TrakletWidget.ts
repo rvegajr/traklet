@@ -1195,10 +1195,15 @@ export class TrakletWidget extends LitElement {
           <strong>No re-entry needed.</strong> Your email and token are saved in this browser's localStorage. They survive page refreshes, tab closes, and browser restarts. Only clearing site data or switching to a different browser/device will require re-entry.
         </div>
 
+        <!-- File-based persistence -->
+        <div style="padding: 6px 8px; background: rgba(26,127,55,0.05); border: 1px solid rgba(26,127,55,0.15); border-radius: var(--traklet-radius-md); font-size: 10px; color: var(--traklet-text-secondary); line-height: 1.5; margin-bottom: var(--traklet-space-sm);">
+          <strong>Survives cache clears:</strong> Add your settings to <code style="font-size: 10px; background: var(--traklet-bg-secondary); padding: 1px 4px; border-radius: 3px;">.traklet/settings.json</code> in your project root. This file lives on disk, not in the browser. Copy <code style="font-size: 10px; background: var(--traklet-bg-secondary); padding: 1px 4px; border-radius: 3px;">settings.template.json</code> to <code style="font-size: 10px; background: var(--traklet-bg-secondary); padding: 1px 4px; border-radius: 3px;">settings.json</code> and fill in your values.
+        </div>
+
         <!-- Code setup -->
         <div style="padding: 6px 8px; background: var(--traklet-bg-secondary); border: 1px solid var(--traklet-border-muted); border-radius: var(--traklet-radius-md); font-size: 10px; color: var(--traklet-text-secondary); line-height: 1.5;">
-          <strong>For developers:</strong> To skip this UI entirely, set the token in your app's code:<br/>
-          <code style="font-size: 10px; background: var(--traklet-bg); padding: 1px 4px; border-radius: 3px;">Traklet.init({ token: 'YOUR_PAT', user: { email: '...' }, ... })</code>
+          <strong>In code:</strong>
+          <code style="font-size: 10px; background: var(--traklet-bg); padding: 1px 4px; border-radius: 3px;">Traklet.init({ token: 'PAT', user: { email: '...' }, ... })</code>
         </div>
       </div>
     `;

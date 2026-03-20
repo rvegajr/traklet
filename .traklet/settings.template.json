@@ -1,0 +1,12 @@
+{
+  "user": {
+    "email": "your.email@company.com",
+    "name": "Your Name"
+  },
+  "token": "paste-your-pat-token-here",
+  "adapter": "azure-devops",
+  "baseUrl": "https://dev.azure.com/your-org",
+  "project": "your-project-id",
+  "position": "bottom-right",
+  "theme": "light"
+}

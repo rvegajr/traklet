@@ -1,33 +1,77 @@
 /**
  * Demo entry point
  *
- * Two modes:
- * - Demo mode (no PAT): localStorage adapter with seeded medical test cases
- * - Live mode (with PAT): Azure DevOps adapter connecting to real backend
+ * Reads .traklet/settings.json at build time (via Vite JSON import).
+ * If the file has a token + adapter, connects to the real backend.
+ * Otherwise falls back to localStorage demo mode with seeded data.
  *
- * The PAT token is entered via the setup bar in the host page.
- * Traklet.init() handles everything — widget auto-mounts.
+ * The settings.json file survives browser cache clears because
+ * it lives on disk, not in the browser.
  */
 
 import { Traklet } from '../src/Traklet';
 import { composeTestCaseBody } from '../src/core/TestCaseTemplate';
 import type { TrakletInstance } from '../src/Traklet';
+import type { TrakletConfig } from '../src/core';
+
+// Vite imports JSON files at build time — the values are baked into the bundle.
+// If the file doesn't exist, the import returns the default (empty object).
+let fileSettings: Record<string, unknown> = {};
+try {
+  fileSettings = (await import('../.traklet/settings.json', { assert: { type: 'json' } })).default;
+} catch {
+  // settings.json doesn't exist — use demo mode
+}
 
 async function initTraklet(): Promise<void> {
-  const instance = await Traklet.init({
-    adapter: 'localStorage',
-    projects: [
-      { id: 'meditrack', name: 'MediTrack Pro' },
-    ],
-    user: {
-      email: 'dr.chen@meditrack.com',
-      name: 'Dr. Sarah Chen',
-    },
-    position: 'bottom-right',
-  });
+  const hasToken = !!(fileSettings['token'] as string);
+  const hasAdapter = !!(fileSettings['adapter'] as string);
 
-  await seedMedicalTestCases(instance);
-  console.log('Traklet demo initialized. Click the icon to open, gear icon for settings.');
+  let config: TrakletConfig;
+
+  if (hasToken && hasAdapter) {
+    // Live mode: settings from .traklet/settings.json
+    const user = fileSettings['user'] as { email?: string; name?: string } | undefined;
+    config = {
+      adapter: fileSettings['adapter'] as TrakletConfig['adapter'],
+      token: fileSettings['token'] as string,
+      baseUrl: (fileSettings['baseUrl'] as string) ?? undefined,
+      projects: [
+        {
+          id: (fileSettings['project'] as string) ?? 'default',
+          name: (fileSettings['project'] as string) ?? 'Default',
+          identifier: (fileSettings['project'] as string) ?? undefined,
+        },
+      ],
+      user: user?.email ? { email: user.email, name: user.name ?? user.email } : undefined,
+      position: (fileSettings['position'] as TrakletConfig['position']) ?? 'bottom-right',
+    };
+  } else {
+    // Demo mode: localStorage with seeded data
+    const user = fileSettings['user'] as { email?: string; name?: string } | undefined;
+    config = {
+      adapter: 'localStorage',
+      projects: [{ id: 'meditrack', name: 'MediTrack Pro' }],
+      user: {
+        email: user?.email ?? 'dr.chen@meditrack.com',
+        name: user?.name ?? 'Dr. Sarah Chen',
+      },
+      position: 'bottom-right',
+    };
+  }
+
+  const instance = await Traklet.init(config);
+
+  // Seed demo data only in localStorage mode
+  if (!hasToken) {
+    await seedMedicalTestCases(instance);
+  }
+
+  console.log(
+    hasToken
+      ? `Traklet connected to ${config.adapter} (settings from .traklet/settings.json)`
+      : 'Traklet demo mode. Add token to .traklet/settings.json for live backend.'
+  );
 }
 
 async function seedMedicalTestCases(instance: TrakletInstance): Promise<void> {
