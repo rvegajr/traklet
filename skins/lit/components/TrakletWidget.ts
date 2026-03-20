@@ -767,7 +767,15 @@ export class TrakletWidget extends LitElement {
     `;
   }
 
+  private needsOnboarding(): boolean {
+    return !this.getSavedSetting('__traklet_user_name__');
+  }
+
   private renderBody() {
+    // First-run onboarding: ask for name before showing anything else
+    if (this.needsOnboarding() && !this.showSettingsView) {
+      return this.renderOnboarding();
+    }
     if (this.showSettingsView) {
       return this.renderSettings();
     }
@@ -1231,6 +1239,80 @@ export class TrakletWidget extends LitElement {
         <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
       </svg>
     `;
+  }
+
+  @state() declare private onboardingName: string;
+  @state() declare private onboardingEmail: string;
+
+  private renderOnboarding() {
+    // Initialize onboarding state if needed
+    if (this.onboardingName === undefined) {
+      this.onboardingName = '';
+      this.onboardingEmail = '';
+    }
+
+    const fld = 'width: 100%; padding: 8px 10px; background: var(--traklet-bg); border-radius: var(--traklet-radius-md); border: 1px solid var(--traklet-border); color: var(--traklet-text); font-size: 13px; box-sizing: border-box;';
+
+    return html`
+      <div style="padding: 20px var(--traklet-space-md); text-align: center;">
+        <div style="font-size: 24px; margin-bottom: 4px;">👋</div>
+        <div style="font-size: 15px; font-weight: 600; color: var(--traklet-text); margin-bottom: 4px;">Welcome to Traklet</div>
+        <div style="font-size: 12px; color: var(--traklet-text-muted); margin-bottom: 16px;">
+          Issue tracking and test case management.<br>Tell us who you are so we can track your work.
+        </div>
+
+        <div style="text-align: left; margin-bottom: 10px;">
+          <label style="display: block; font-size: 11px; font-weight: 600; color: var(--traklet-text-secondary); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px;">Your Name *</label>
+          <input
+            type="text"
+            placeholder="e.g., Sarah Chen"
+            data-testid="traklet-onboard-name"
+            .value=${this.onboardingName}
+            style="${fld}"
+            @input=${(e: InputEvent) => { this.onboardingName = (e.target as HTMLInputElement).value; }}
+          />
+        </div>
+
+        <div style="text-align: left; margin-bottom: 10px;">
+          <label style="display: block; font-size: 11px; font-weight: 600; color: var(--traklet-text-secondary); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px;">Your Email</label>
+          <input
+            type="email"
+            placeholder="you@company.com"
+            data-testid="traklet-onboard-email"
+            .value=${this.onboardingEmail}
+            style="${fld}"
+            @input=${(e: InputEvent) => { this.onboardingEmail = (e.target as HTMLInputElement).value; }}
+            @keydown=${(e: KeyboardEvent) => { if (e.key === 'Enter') this.completeOnboarding(); }}
+          />
+          <div style="font-size: 10px; color: var(--traklet-text-muted); margin-top: 3px; text-align: left;">
+            Used to filter issues assigned to you and attribute your test results.
+          </div>
+        </div>
+
+        <button
+          class="traklet-btn traklet-btn--primary"
+          style="width: 100%; margin-top: 8px;"
+          data-testid="traklet-btn-onboard-start"
+          ?disabled=${!this.onboardingName.trim()}
+          @click=${this.completeOnboarding}
+        >
+          Get Started
+        </button>
+
+        <div style="font-size: 10px; color: var(--traklet-text-muted); margin-top: 10px;">
+          You can change these in settings (gear icon) anytime.
+        </div>
+      </div>
+    `;
+  }
+
+  private completeOnboarding() {
+    if (!this.onboardingName.trim()) return;
+    this.saveSetting('__traklet_user_name__', this.onboardingName.trim());
+    if (this.onboardingEmail.trim()) {
+      this.saveSetting('__traklet_user_email__', this.onboardingEmail.trim());
+    }
+    this.requestUpdate();
   }
 
   private renderSettings() {
