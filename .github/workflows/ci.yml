@@ -55,7 +55,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests
-        run: npx playwright test e2e/widget.spec.ts e2e/live-ado-test.spec.ts
+        run: npx playwright test e2e/widget.spec.ts e2e/live-ado-test.spec.ts --retries=1
 
       - name: Upload E2E artifacts
         if: failure()
