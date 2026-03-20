@@ -3,7 +3,7 @@
  * Displays a list of issues with filtering and actions
  */
 
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { baseStyles, buttonStyles, formStyles, labelStyles, layoutStyles } from '../styles/base';
 import type { IssueListViewModel, IssueListItemViewModel, IIssueListPresenter } from '../../../src/presenters';
@@ -42,7 +42,19 @@ export class TrakletIssueList extends LitElement {
       }
 
       .issue-list__search {
-        min-width: 200px;
+        min-width: 120px;
+        flex: 1;
+      }
+
+      .issue-list__assignee-select {
+        padding: var(--traklet-space-xs) var(--traklet-space-sm);
+        font-size: var(--traklet-font-size-xs);
+        border: 1px solid var(--traklet-border);
+        border-radius: var(--traklet-radius-md);
+        background: var(--traklet-bg);
+        color: var(--traklet-text);
+        max-width: 140px;
+        cursor: pointer;
       }
 
       .issue-list__items {
@@ -155,7 +167,8 @@ export class TrakletIssueList extends LitElement {
       isLoading: false,
       error: null,
       pagination: { page: 1, limit: 50, total: 0, hasMore: false },
-      filters: { state: 'open', labels: [], search: '' },
+      filters: { state: 'open', labels: [], search: '', assignee: null },
+      availableAssignees: [],
       canCreateIssue: false,
     };
   }
@@ -219,11 +232,32 @@ export class TrakletIssueList extends LitElement {
           <input
             type="search"
             class="traklet-input issue-list__search"
-            placeholder="Search issues..."
+            placeholder="Search..."
             data-testid="traklet-search"
             .value=${this.viewModel.filters.search}
             @input=${this.handleSearch}
           />
+          ${this.viewModel.availableAssignees.length > 0
+            ? html`
+                <select
+                  class="issue-list__assignee-select"
+                  data-testid="traklet-filter-assignee"
+                  @change=${this.handleAssigneeFilter}
+                >
+                  <option value="">All users</option>
+                  ${this.viewModel.availableAssignees.map(
+                    (name) => html`
+                      <option
+                        value=${name}
+                        ?selected=${this.viewModel.filters.assignee === name}
+                      >
+                        ${name}
+                      </option>
+                    `
+                  )}
+                </select>
+              `
+            : nothing}
         </div>
         ${this.viewModel.canCreateIssue
           ? html`
@@ -393,6 +427,11 @@ export class TrakletIssueList extends LitElement {
   private handleSearch(e: Event) {
     const input = e.target as HTMLInputElement;
     this.presenter?.setFilter({ search: input.value });
+  }
+
+  private handleAssigneeFilter(e: Event) {
+    const select = e.target as HTMLSelectElement;
+    this.presenter?.setFilter({ assignee: select.value || null });
   }
 
   private handleCreate() {

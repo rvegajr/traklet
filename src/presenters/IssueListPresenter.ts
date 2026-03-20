@@ -41,6 +41,7 @@ export class IssueListPresenter implements IIssueListPresenter {
         state: this.viewModel.filters.state === 'all' ? undefined : this.viewModel.filters.state,
         labels: this.viewModel.filters.labels.length > 0 ? this.viewModel.filters.labels : undefined,
         search: this.viewModel.filters.search || undefined,
+        assignee: this.viewModel.filters.assignee ?? undefined,
         page: 1,
         limit: 50,
         ...query,
@@ -48,9 +49,19 @@ export class IssueListPresenter implements IIssueListPresenter {
 
       const issues = result.items.map((issue) => this.toListItemViewModel(issue));
 
+      // Extract unique assignee names from loaded issues for the filter dropdown
+      const assigneeSet = new Set<string>();
+      for (const issue of result.items) {
+        for (const a of issue.assignees) {
+          assigneeSet.add(a.name);
+        }
+        assigneeSet.add(issue.createdBy.name);
+      }
+
       this.updateViewModel({
         issues,
         isLoading: false,
+        availableAssignees: Array.from(assigneeSet).sort(),
         pagination: {
           page: result.page,
           limit: result.limit,
@@ -79,6 +90,7 @@ export class IssueListPresenter implements IIssueListPresenter {
         state: this.viewModel.filters.state === 'all' ? undefined : this.viewModel.filters.state,
         labels: this.viewModel.filters.labels.length > 0 ? this.viewModel.filters.labels : undefined,
         search: this.viewModel.filters.search || undefined,
+        assignee: this.viewModel.filters.assignee ?? undefined,
         page: nextPage,
         limit: this.viewModel.pagination.limit,
       });
@@ -107,7 +119,7 @@ export class IssueListPresenter implements IIssueListPresenter {
     await this.loadIssues({ page: 1 });
   }
 
-  setFilter(filter: Partial<{ state: 'open' | 'closed' | 'all'; labels: string[]; search: string }>): void {
+  setFilter(filter: Partial<{ state: 'open' | 'closed' | 'all'; labels: string[]; search: string; assignee: string | null }>): void {
     this.updateViewModel({
       filters: {
         ...this.viewModel.filters,
@@ -209,7 +221,9 @@ export class IssueListPresenter implements IIssueListPresenter {
         state: 'open',
         labels: [],
         search: '',
+        assignee: null,
       },
+      availableAssignees: [],
       canCreateIssue: permissionManager.canCreateIssue(),
     };
   }

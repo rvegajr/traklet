@@ -103,7 +103,9 @@ export interface IssueListViewModel {
     readonly state: 'open' | 'closed' | 'all';
     readonly labels: readonly string[];
     readonly search: string;
+    readonly assignee: string | null;
   };
+  readonly availableAssignees: readonly string[];
   readonly canCreateIssue: boolean;
 }
 
@@ -156,7 +158,7 @@ export interface IIssueListPresenter {
   /**
    * Update filters
    */
-  setFilter(filter: Partial<{ state: 'open' | 'closed' | 'all'; labels: string[]; search: string }>): void;
+  setFilter(filter: Partial<{ state: 'open' | 'closed' | 'all'; labels: string[]; search: string; assignee: string | null }>): void;
 
   /**
    * Select an issue (navigate to detail)
