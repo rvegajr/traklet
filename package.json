@@ -17,6 +17,9 @@
       "types": "./dist/lit/index.d.ts"
     }
   },
+  "bin": {
+    "traklet": "./dist/cli/traklet.js"
+  },
   "files": [
     "dist"
   ],
@@ -56,6 +59,7 @@
   "license": "MIT",
   "devDependencies": {
     "@playwright/test": "^1.58.2",
+    "@types/glob": "^8.1.0",
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
@@ -74,6 +78,9 @@
     "vitest": "^1.0.0"
   },
   "dependencies": {
+    "commander": "^14.0.3",
+    "glob": "^13.0.6",
+    "gray-matter": "^4.0.3",
     "idb": "^8.0.0",
     "lit": "^3.1.0",
     "zod": "^3.22.0"
