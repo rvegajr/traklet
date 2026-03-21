@@ -16,6 +16,7 @@ import { baseStyles, buttonStyles, layoutStyles } from '../styles/base';
 import type { TrakletInstance } from '../../../src/Traklet';
 import type { Project } from '../../../src/models';
 import { getEventBus } from '../../../src/core';
+import { getConfigManager } from '../../../src/core/ConfigManager';
 import './TrakletIssueList';
 import './TrakletIssueDetail';
 import './TrakletTestRunView';
@@ -616,6 +617,9 @@ export class TrakletWidget extends LitElement {
   private updateFromInstance(): void {
     if (!this.instance) return;
 
+    // Seed widget identity from config.user (skip onboarding if host app provided user)
+    this.seedIdentityFromConfig();
+
     this.isOpen = this.instance.isOpen();
     this.projects = this.instance.getProjects();
     this.currentProject = this.instance.getCurrentProject();
@@ -769,6 +773,24 @@ export class TrakletWidget extends LitElement {
 
   private needsOnboarding(): boolean {
     return !this.getSavedSetting('__traklet_user_name__');
+  }
+
+  /**
+   * Seed widget identity from config.user so the host app can pass the
+   * logged-in user and skip the onboarding prompt automatically.
+   * Only seeds if localStorage doesn't already have a value (respects manual overrides).
+   */
+  private seedIdentityFromConfig(): void {
+    const user = getConfigManager().getUser();
+    if (!user) return;
+
+    if (!this.getSavedSetting('__traklet_user_name__')) {
+      const name = user.name || user.displayName || user.email;
+      this.saveSetting('__traklet_user_name__', name);
+    }
+    if (!this.getSavedSetting('__traklet_user_email__') && user.email) {
+      this.saveSetting('__traklet_user_email__', user.email);
+    }
   }
 
   private renderBody() {

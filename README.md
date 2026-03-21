@@ -66,6 +66,204 @@ await Traklet.init({
 
 ---
 
+## Framework Integration
+
+Traklet is fully self-contained. **No proxy routes, no API middleware, no backend code in your app.** Traklet's built-in adapters handle all communication with GitHub, Azure DevOps, or your REST API directly. The only thing your host application provides is the PAT token via an environment variable.
+
+### What You Write vs. What Traklet Handles
+
+| Concern | Your app | Traklet |
+|---------|----------|---------|
+| API calls to GitHub/ADO | Nothing | Built-in adapters |
+| Issue CRUD, comments, labels | Nothing | Adapter layer |
+| Widget UI (list, detail, form) | Nothing | Shadow DOM components |
+| CSS isolation | Nothing | Shadow DOM — zero conflicts |
+| Offline queue & sync | Nothing | IndexedDB operation queue |
+| Authentication | Provide a PAT token | Sends it with every API call |
+| User identity | Pass current user to `init()` | Attributes issues to that user |
+
+### Passing the Current User
+
+Traklet needs to know **who** is performing actions so issues and test results are properly attributed. Pass the logged-in user's identity from your app's existing auth system:
+
+```typescript
+await Traklet.init({
+  adapter: 'github',
+  token: process.env.NEXT_PUBLIC_GITHUB_TOKEN,
+  projects: [{ id: 'my-repo', name: 'My Repo', identifier: 'owner/repo' }],
+  user: {
+    email: currentUser.email,       // Required — used for attribution
+    name: currentUser.displayName,  // Optional — shown in the widget
+    id: currentUser.id,             // Optional — unique identifier
+  },
+});
+```
+
+If `user` is omitted, the widget settings gear allows each user to self-identify (name + email stored in browser localStorage). But for proper tracking, always pass the user from your auth system.
+
+**Common patterns for reading the current user:**
+
+```typescript
+// JWT in localStorage (decode payload without verification)
+const jwt = JSON.parse(atob(localStorage.getItem('auth_token')!.split('.')[1]));
+user: { email: jwt.email, id: jwt.sub }
+
+// React context
+const { user } = useAuth();
+user: { email: user.email, name: user.name }
+
+// Cookie-based session
+const res = await fetch('/api/me');
+const me = await res.json();
+user: { email: me.email, name: me.name, id: me.id }
+```
+
+### Next.js (App Router)
+
+**1. Install**
+
+```bash
+npm install traklet
+# or link a local build:
+npm link traklet
+```
+
+If using `npm link`, add to `next.config.js`:
+
+```js
+transpilePackages: ['traklet'],
+// and in webpack config:
+config.resolve.symlinks = false;
+```
+
+**2. Add environment variables** to `.env.local` (gitignored):
+
+```bash
+NEXT_PUBLIC_TRAKLET_GITHUB_TOKEN=ghp_your_pat_here
+NEXT_PUBLIC_TRAKLET_GITHUB_REPO=owner/repo
+```
+
+**3. Create a single component** — this is the only file you add:
+
+```tsx
+// src/components/TrakletWidget.tsx
+'use client';
+
+import { useEffect, useRef } from 'react';
+
+// Decode JWT payload to get the logged-in user (no verification needed client-side)
+function decodeJwt(token: string | null) {
+  if (!token) return null;
+  try { return JSON.parse(atob(token.split('.')[1])); } catch { return null; }
+}
+
+export function TrakletWidget() {
+  const instanceRef = useRef<{ destroy: () => void } | null>(null);
+  const initRef = useRef(false);
+
+  useEffect(() => {
+    const token = process.env.NEXT_PUBLIC_TRAKLET_GITHUB_TOKEN;
+    const repo = process.env.NEXT_PUBLIC_TRAKLET_GITHUB_REPO;
+    if (!token || !repo || initRef.current) return;
+    initRef.current = true;
+
+    (async () => {
+      const { Traklet } = await import('traklet');
+
+      // Read current user from your app's auth token
+      const jwt = decodeJwt(localStorage.getItem('auth_token'));
+
+      instanceRef.current = await Traklet.init({
+        adapter: 'github',
+        token,
+        projects: [{ id: 'my-project', name: 'My Project', identifier: repo }],
+        user: jwt ? { email: jwt.email, id: jwt.sub } : undefined,
+      });
+    })().catch(console.error);
+
+    return () => {
+      instanceRef.current?.destroy();
+      instanceRef.current = null;
+      initRef.current = false;
+    };
+  }, []);
+
+  return null; // Traklet mounts its own Shadow DOM
+}
+```
+
+**4. Add to your layout:**
+
+```tsx
+// src/app/layout.tsx
+import { TrakletWidget } from '@/components/TrakletWidget';
+
+// Inside <body>:
+<TrakletWidget />
+```
+
+That's it. No API routes. No proxy. No data mapping.
+
+### React (Vite / CRA)
+
+```tsx
+// App.tsx or index.tsx
+import { useEffect } from 'react';
+import { useAuth } from './hooks/useAuth'; // your app's auth hook
+
+function App() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    let instance: { destroy: () => void } | null = null;
+    (async () => {
+      const { Traklet } = await import('traklet');
+      instance = await Traklet.init({
+        adapter: 'github',
+        token: import.meta.env.VITE_GITHUB_TOKEN,
+        projects: [{ id: 'my-repo', name: 'My Repo', identifier: 'owner/repo' }],
+        user: user ? { email: user.email, name: user.name } : undefined,
+      });
+    })();
+    return () => { instance?.destroy(); };
+  }, [user]);
+
+  return <div>{/* your app */}</div>;
+}
+```
+
+### Vanilla JavaScript
+
+```html
+<script type="module">
+  import { Traklet } from './node_modules/traklet/dist/traklet.es.js';
+
+  await Traklet.init({
+    adapter: 'github',
+    token: 'ghp_xxx', // In production, inject via build tool or server-side template
+    projects: [{ id: 'my-repo', name: 'My Repo', identifier: 'owner/repo' }],
+  });
+</script>
+```
+
+### Dev-Only Conditional Loading
+
+To show the widget only in development environments, guard the init call:
+
+```typescript
+const isDev = window.location.hostname === 'localhost'
+  || window.location.port === '3000';
+
+if (isDev && token) {
+  const { Traklet } = await import('traklet');
+  await Traklet.init({ /* ... */ });
+}
+```
+
+The dynamic `import()` ensures Traklet is never bundled in production when the guard prevents execution.
+
+---
+
 ## Security: Token Management
 
 > **Never commit tokens to source code or version control.**

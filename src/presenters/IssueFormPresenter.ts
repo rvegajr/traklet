@@ -6,7 +6,7 @@
 import type { IBackendAdapter, ILabelReader } from '@/contracts';
 import { adapterHasCapability } from '@/contracts';
 import type { Issue, CreateIssueDTO, UpdateIssueDTO, IssuePriority } from '@/models';
-import { getStateManager, getEventBus } from '@/core';
+import { getStateManager, getEventBus, getAuthManager } from '@/core';
 import type { IIssueFormPresenter, IssueFormViewModel } from './IPresenter';
 
 interface FormData {
@@ -199,7 +199,7 @@ export class IssueFormPresenter implements IIssueFormPresenter {
   private async createIssue(): Promise<void> {
     const dto: CreateIssueDTO = {
       title: this.formData.title.trim(),
-      body: this.formData.body.trim(),
+      body: this.appendReporterFooter(this.formData.body.trim()),
       labels: this.formData.labels.length > 0 ? this.formData.labels : undefined,
       priority: this.formData.priority,
     };
@@ -301,5 +301,22 @@ export class IssueFormPresenter implements IIssueFormPresenter {
         console.error('Error in IssueFormPresenter subscriber:', error);
       }
     }
+  }
+
+  /**
+   * Append a "Reported by" footer to the issue body when a user identity is configured.
+   * This ensures proper tester attribution when using a shared PAT token.
+   */
+  private appendReporterFooter(body: string): string {
+    const user = getAuthManager().getCurrentUser();
+    if (!user) return body;
+
+    const name = user.name || user.displayName || user.email;
+    const parts = [name];
+    if (user.email && user.email !== name) {
+      parts.push(user.email);
+    }
+
+    return body + `\n\n---\n*Reported by: ${parts.join(' — ')}*`;
   }
 }

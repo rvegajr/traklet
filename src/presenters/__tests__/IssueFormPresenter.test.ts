@@ -14,6 +14,9 @@ import type { AdapterConfig } from '@/contracts';
 import type { TrakletConfig } from '@/core/ConfigManager';
 import type { IssueFormViewModel } from '../IPresenter';
 
+// Footer appended by IssueFormPresenter when a user is configured
+const REPORTER_FOOTER = '\n\n---\n*Reported by: Test User — test@example.com*';
+
 describe('IssueFormPresenter', () => {
   let presenter: IssueFormPresenter;
   let adapter: LocalStorageAdapter;
@@ -331,7 +334,7 @@ describe('IssueFormPresenter', () => {
       expect(createSpy).toHaveBeenCalledOnce();
       expect(createSpy).toHaveBeenCalledWith(projectId, {
         title: 'New Issue',
-        body: 'Issue body',
+        body: 'Issue body' + REPORTER_FOOTER,
         labels: ['bug'],
         priority: 'high',
       });
@@ -401,7 +404,7 @@ describe('IssueFormPresenter', () => {
 
       expect(createSpy).toHaveBeenCalledWith(projectId, {
         title: 'No Labels',
-        body: 'Body',
+        body: 'Body' + REPORTER_FOOTER,
         labels: undefined,
         priority: undefined,
       });
@@ -418,7 +421,7 @@ describe('IssueFormPresenter', () => {
 
       expect(createSpy).toHaveBeenCalledWith(projectId, {
         title: 'Trimmed Title',
-        body: 'Trimmed Body',
+        body: 'Trimmed Body' + REPORTER_FOOTER,
         labels: undefined,
         priority: undefined,
       });
