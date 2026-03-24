@@ -146,11 +146,13 @@ const SECTION_DEFINITIONS: readonly SectionMeta[] = [
 // Markers
 // ============================================
 
-// Curly-brace markers survive Azure DevOps HTML sanitization.
-// HTML comments are stripped by ADO, so we cannot use <!-- --> format.
-const TEMPLATE_MARKER = '{traklet:test-case}';
-const SECTION_OPEN_RE = /\{traklet:section:([a-z-]+)\}/;
-const SECTION_CLOSE_RE = /\{\/traklet:section:([a-z-]+)\}/;
+// Markers are wrapped in hidden spans so they're invisible in Azure DevOps
+// and GitHub's markdown rendering, but still parseable by Traklet.
+// We support both raw curly-brace format (legacy) and hidden span format (new).
+const TEMPLATE_MARKER_NEW = '<span style="display:none">{traklet:test-case}</span>';
+const TEMPLATE_MARKER_LEGACY = '{traklet:test-case}';
+const SECTION_OPEN_RE = /(?:<span[^>]*>)?\{traklet:section:([a-z-]+)\}(?:<\/span>)?/;
+const SECTION_CLOSE_RE = /(?:<span[^>]*>)?\{\/traklet:section:([a-z-]+)\}(?:<\/span>)?/;
 const JAM_LINK_RE = /\[([^\]]*)\]\((https:\/\/jam\.dev\/c\/[^\s)]+)\)/g;
 const JAM_URL_BARE_RE = /(?:^|\s)(https:\/\/jam\.dev\/c\/[^\s)]+)/g;
 const ATTACHMENT_IMG_RE = /!\[([^\]]*)\]\(([^\s)]+)\)/g;
@@ -160,7 +162,7 @@ const ATTACHMENT_IMG_RE = /!\[([^\]]*)\]\(([^\s)]+)\)/g;
 // ============================================
 
 export function parseTestCaseBody(body: string): ParsedTestCase {
-  const isTestCase = body.includes(TEMPLATE_MARKER) || body.includes('traklet:section:');
+  const isTestCase = body.includes(TEMPLATE_MARKER_LEGACY) || body.includes(TEMPLATE_MARKER_NEW) || body.includes('traklet:section:');
 
   if (!isTestCase) {
     return {
@@ -216,7 +218,7 @@ function parseSections(body: string): TestCaseSection[] {
     }
 
     // Skip the template marker line
-    if (line.trim() === TEMPLATE_MARKER.trim()) {
+    if (line.trim() === TEMPLATE_MARKER_LEGACY.trim() || line.includes(TEMPLATE_MARKER_LEGACY) || line.includes('{traklet:test-case}')) {
       continue;
     }
 
@@ -259,72 +261,77 @@ function buildSection(id: string, contentLines: string[]): TestCaseSection {
 // Composer
 // ============================================
 
+/** Wrap a marker in a hidden span so it's invisible in ADO/GitHub markdown rendering */
+function hidden(marker: string): string {
+  return `<span style="display:none">${marker}</span>`;
+}
+
 export function composeTestCaseBody(options: TestCaseCreateOptions): string {
   const lines: string[] = [];
 
-  lines.push(TEMPLATE_MARKER);
+  lines.push(hidden('{traklet:test-case}'));
   lines.push('');
 
   // Objective
-  lines.push('{traklet:section:objective}');
+  lines.push(hidden('{traklet:section:objective}'));
   lines.push('## Objective');
   lines.push(options.objective);
-  lines.push('{/traklet:section:objective}');
+  lines.push(hidden('{/traklet:section:objective}'));
   lines.push('');
 
   // Prerequisites
   if (options.prerequisites) {
-    lines.push('{traklet:section:prerequisites}');
+    lines.push(hidden('{traklet:section:prerequisites}'));
     lines.push('## Prerequisites');
     lines.push(options.prerequisites);
-    lines.push('{/traklet:section:prerequisites}');
+    lines.push(hidden('{/traklet:section:prerequisites}'));
     lines.push('');
   }
 
   // Steps
-  lines.push('{traklet:section:steps}');
+  lines.push(hidden('{traklet:section:steps}'));
   lines.push('## Steps');
   options.steps.forEach((step, i) => {
     lines.push(`${i + 1}. ${step}`);
   });
-  lines.push('{/traklet:section:steps}');
+  lines.push(hidden('{/traklet:section:steps}'));
   lines.push('');
 
   // Expected Result
-  lines.push('{traklet:section:expected-result}');
+  lines.push(hidden('{traklet:section:expected-result}'));
   lines.push('## Expected Result');
   lines.push(options.expectedResult);
-  lines.push('{/traklet:section:expected-result}');
+  lines.push(hidden('{/traklet:section:expected-result}'));
   lines.push('');
 
   // Actual Result (editable by tester)
-  lines.push('{traklet:section:actual-result}');
+  lines.push(hidden('{traklet:section:actual-result}'));
   lines.push('## Actual Result');
   lines.push('_Not yet tested._');
-  lines.push('{/traklet:section:actual-result}');
+  lines.push(hidden('{/traklet:section:actual-result}'));
   lines.push('');
 
   // Evidence (editable by tester)
-  lines.push('{traklet:section:evidence}');
+  lines.push(hidden('{traklet:section:evidence}'));
   lines.push('## Evidence');
   lines.push('_No recordings or screenshots attached yet._');
   lines.push('');
   lines.push('> **Tip:** Use [Jam.dev](https://jam.dev) to record your testing session, then paste the link here.');
-  lines.push('{/traklet:section:evidence}');
+  lines.push(hidden('{/traklet:section:evidence}'));
   lines.push('');
 
   // Diagnostics (auto-populated)
-  lines.push('{traklet:section:diagnostics}');
+  lines.push(hidden('{traklet:section:diagnostics}'));
   lines.push('## Diagnostics');
   lines.push('_Diagnostics will be auto-attached when submitting results._');
-  lines.push('{/traklet:section:diagnostics}');
+  lines.push(hidden('{/traklet:section:diagnostics}'));
   lines.push('');
 
   // Notes (editable)
-  lines.push('{traklet:section:notes}');
+  lines.push(hidden('{traklet:section:notes}'));
   lines.push('## Notes');
   lines.push('');
-  lines.push('{/traklet:section:notes}');
+  lines.push(hidden('{/traklet:section:notes}'));
 
   return lines.join('\n');
 }
@@ -341,12 +348,12 @@ export function updateSection(body: string, sectionId: string, newContent: strin
   const closeIdx = body.indexOf(closeMarker);
 
   if (openIdx === -1 || closeIdx === -1 || closeIdx <= openIdx) {
-    // Section not found — append it
+    // Section not found — append it with hidden markers
     const meta = SECTION_DEFINITIONS.find((s) => s.id === sectionId);
     const title = meta?.title ?? formatSectionId(sectionId);
     return (
       body +
-      `\n\n${openMarker}\n## ${title}\n${newContent}\n${closeMarker}`
+      `\n\n${hidden(openMarker)}\n## ${title}\n${newContent}\n${hidden(closeMarker)}`
     );
   }
 

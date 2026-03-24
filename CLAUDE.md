@@ -553,6 +553,136 @@ interface TrakletConfig {
 
 ---
 
+## 🔌 MANDATE 10: HOST INTEGRATION — MINIMAL, DROP-IN, ZERO COUPLING
+
+### THE HOST APP MUST NOT CHANGE ITS OWN CODE TO ACCOMMODATE TRAKLET
+
+Traklet is a guest in the host application. The integration must be so light that removing Traklet means deleting one component file and two env vars — nothing else.
+
+### The Encapsulation Contract
+
+| Concern | Host app provides | Traklet handles |
+|---------|------------------|-----------------|
+| API calls to backend | **Nothing** | Built-in adapters |
+| Issue/test case CRUD | **Nothing** | Adapter layer |
+| Widget UI | **Nothing** | Shadow DOM components |
+| CSS isolation | **Nothing** | Shadow DOM — zero conflicts |
+| Offline queue & sync | **Nothing** | IndexedDB operation queue |
+| User identity | **Nothing** | `.traklet/settings.json` (per-tester, gitignored) |
+| Authentication | PAT token via env var | Sends it with every API call |
+
+### The Canonical Integration Pattern (ENFORCE THIS EXACTLY)
+
+**Total host-side footprint: 1 component + 1 line in layout + 2 env vars. Nothing else.**
+
+```tsx
+// src/components/TrakletDevWidget.tsx — THE ONLY FILE YOU ADD
+'use client';
+
+import { useEffect, useRef } from 'react';
+
+export function TrakletDevWidget() {
+  const instanceRef = useRef<{ destroy: () => void } | null>(null);
+  const initRef = useRef(false);
+
+  useEffect(() => {
+    const token = process.env.NEXT_PUBLIC_TRAKLET_PAT;
+    if (!token || process.env.NEXT_PUBLIC_TRAKLET_ENABLED !== 'true' || initRef.current) return;
+    initRef.current = true;
+
+    (async () => {
+      const { Traklet } = await import('traklet');
+      instanceRef.current = await Traklet.init({
+        adapter: 'azure-devops',
+        token,
+        baseUrl: process.env.NEXT_PUBLIC_TRAKLET_BASE_URL || 'https://dev.azure.com/org',
+        projects: [{ id: 'my-project', name: 'My Project' }],
+        position: 'bottom-right',
+      });
+    })().catch((err) => console.warn('[Traklet] Failed to load:', err));
+
+    return () => {
+      instanceRef.current?.destroy();
+      instanceRef.current = null;
+      initRef.current = false;
+    };
+  }, []);
+
+  return null;
+}
+```
+
+### Rules (ENFORCE STRICTLY)
+
+```typescript
+// ❌ REJECT — Importing ANYTHING from the host app
+import { useSession } from 'next-auth/react';
+import { useAuth } from '@/lib/auth';
+import { theme } from '@/config/theme';
+
+// ❌ REJECT — Reading host localStorage/cookies/JWT
+const jwt = localStorage.getItem('auth_token');
+const decoded = JSON.parse(atob(jwt.split('.')[1]));
+
+// ❌ REJECT — Passing host state into Traklet
+Traklet.init({ user: { email: session.user.email } });
+
+// ❌ REJECT — Host-side API routes or proxies for Traklet
+// app/api/traklet/route.ts  ← NEVER CREATE THIS
+
+// ✅ REQUIRE — Only env vars and dynamic import
+const token = process.env.NEXT_PUBLIC_TRAKLET_PAT;
+const { Traklet } = await import('traklet');
+```
+
+### User Identity Pattern
+
+User identity comes from `.traklet/settings.json`, NOT from the host app's auth system:
+
+```json
+// .traklet/settings.json (gitignored — each tester creates their own)
+{
+  "user": { "email": "tester@company.com", "name": "Jane Doe" },
+  "token": "paste-your-pat-here",
+  "adapter": "azure-devops",
+  "baseUrl": "https://dev.azure.com/org",
+  "project": "my-project"
+}
+```
+
+**Why not read from the host's auth?**
+1. It couples Traklet to the host's auth system (NextAuth, Clerk, Auth0, etc.)
+2. It means the widget breaks if auth changes
+3. It means different integration code per host framework
+4. The tester using Traklet may be a QA person, not a user of the host app
+5. `.traklet/settings.json` works identically in every host app — true drop-in
+
+### Dev-Only Guard Pattern
+
+Traklet MUST NOT be bundled in production. The `process.env.NEXT_PUBLIC_TRAKLET_ENABLED !== 'true'` guard + dynamic `import()` ensures:
+- Tree-shaking removes the entire codepath when the env var is absent
+- The `traklet` package is never fetched/parsed in production
+- Zero runtime cost when disabled
+
+### Removal = 3 Deletions
+
+To remove Traklet from any host app:
+1. Delete `TrakletDevWidget.tsx`
+2. Delete the `<TrakletDevWidget />` line from layout
+3. Delete the env vars from `.env.local`
+
+No other files, configs, or dependencies change. If removal requires more than this, the integration is wrong.
+
+**When reviewing host integrations:**
+1. REJECT any import from the host app's own modules
+2. REJECT any reading of host auth state (session, JWT, cookies)
+3. REJECT any host-side API routes for Traklet
+4. REQUIRE user identity via `.traklet/settings.json` only
+5. REQUIRE dev-only guard with dynamic import
+6. VERIFY removal is exactly 3 deletions
+
+---
+
 ## 📋 UI AUTOMATION REQUIREMENTS
 
 All UI components MUST be automation-friendly.
@@ -728,28 +858,58 @@ You are the **architectural enforcer** for Traklet. Your job is to:
 
 ## 💡 QUICK REFERENCE
 
-### Initialize Traklet
+### Initialize Traklet (Minimal Footprint)
 ```typescript
-import { Traklet } from 'traklet';
+// CORRECT: Zero host coupling
+'use client';
+import { useEffect, useRef } from 'react';
 
-Traklet.init({
-  adapter: 'github',
-  backend: { owner: 'myorg', repo: 'myrepo' },
-  user: { email: 'dev@example.com', name: 'Developer' },
-  auth: { token: process.env.GITHUB_PAT }
-});
+export function TrakletDevWidget() {
+  const instanceRef = useRef<{ destroy: () => void } | null>(null);
+  const initRef = useRef(false);
+
+  useEffect(() => {
+    const token = process.env.NEXT_PUBLIC_TRAKLET_PAT;
+    if (!token || process.env.NEXT_PUBLIC_TRAKLET_ENABLED !== 'true' || initRef.current) {
+      return;
+    }
+    initRef.current = true;
+
+    (async () => {
+      const { Traklet } = await import('traklet');
+      instanceRef.current = await Traklet.init({
+        adapter: 'azure-devops',
+        token,
+        baseUrl: process.env.NEXT_PUBLIC_TRAKLET_BASE_URL || 'https://dev.azure.com/org',
+        projects: [{ id: 'my-project', name: 'My Project' }],
+      });
+    })().catch((err) => console.warn('[Traklet] Failed to load:', err));
+
+    return () => {
+      instanceRef.current?.destroy();
+      instanceRef.current = null;
+      initRef.current = false;
+    };
+  }, []);
+
+  return null;
+}
 ```
 
 ### Script Tag Integration
 ```html
-<script src="https://unpkg.com/traklet/dist/traklet.min.js"></script>
-<script>
-  Traklet.init({
-    adapter: 'github',
-    backend: { owner: 'myorg', repo: 'myrepo' },
-    user: { email: 'user@example.com', name: 'User' },
-    auth: { getToken: () => window.getGitHubToken() }
-  });
+<script type="module">
+  // NEVER hardcode tokens
+  const token = window.ENV?.TRAKLET_PAT; // Server-side injected
+  
+  if (token) {
+    const { Traklet } = await import('./traklet.es.js');
+    await Traklet.init({
+      adapter: 'github',
+      token,
+      projects: [{ id: 'owner/repo', name: 'My Repo' }],
+    });
+  }
 </script>
 ```
 
@@ -764,10 +924,11 @@ class MyAdapter implements IBackendAdapter {
 Traklet.init({
   adapter: MyAdapter,
   backend: { apiUrl: 'https://my-api.com' },
-  user: { email: 'user@example.com', name: 'User' },
-  auth: { token: 'xxx' }
+  auth: { token: process.env.MY_API_TOKEN }
 });
 ```
+
+**See README.md for complete integration examples and anti-patterns guide.**
 
 ---
 

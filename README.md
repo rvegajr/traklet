@@ -18,17 +18,82 @@
 - **Screenshot Paste** - Ctrl+V images into any editable section
 - **CLI** - `npx traklet sync` seeds test cases from markdown files
 
+## Design Philosophy: Minimal Host Footprint
+
+Traklet follows a strict **zero-coupling** integration pattern:
+
+### What Makes Traklet Different
+
+| Traditional Issue Tracker | Traklet |
+|---------------------------|---------|
+| Backend integration code in your app | Built-in adapters, no host code |
+| API proxy routes (`/api/issues/*`) | Direct adapter-to-backend calls |
+| UI components in your component tree | Shadow DOM, isolated |
+| CSS conflicts & specificity wars | Shadow DOM, zero leaks |
+| Reads from host auth (JWT, session) | Self-contained `.traklet/settings.json` |
+| 10+ files, complex setup | 1 component + 2 env vars |
+
+### The Integration Contract
+
+**You provide:**
+- 1 wrapper component that calls `Traklet.init()`
+- 2 environment variables (PAT token + optional config)
+
+**Traklet provides:**
+- Complete UI (Shadow DOM isolated)
+- Backend adapters (GitHub, Azure DevOps, REST)
+- Offline queue & sync
+- User identity management
+- Test case management
+
+**Removal = 3 deletions:**
+1. Delete the wrapper component
+2. Delete `<TrakletWidget />` from your layout
+3. Delete the env vars
+
+No residual code. No migrations. No cleanup. If it's harder than this, the integration is wrong.
+
 ## Quick Start
 
-```typescript
-import { Traklet } from 'traklet';
+**Zero-coupling integration in 3 steps:**
 
-await Traklet.init({
-  adapter: 'localStorage',
-  projects: [{ id: 'my-project', name: 'My Project' }],
-});
-// Widget appears. Done.
+```typescript
+// 1. Install
+npm install traklet
+
+// 2. Create ONE wrapper component (the only file you add)
+'use client';
+import { useEffect } from 'react';
+
+export function TrakletDevWidget() {
+  useEffect(() => {
+    const token = process.env.NEXT_PUBLIC_TRAKLET_PAT;
+    if (!token || process.env.NEXT_PUBLIC_TRAKLET_ENABLED !== 'true') return;
+
+    (async () => {
+      const { Traklet } = await import('traklet');
+      await Traklet.init({
+        adapter: 'localStorage',  // or 'github', 'azure-devops'
+        projects: [{ id: 'my-project', name: 'My Project' }],
+      });
+    })();
+  }, []);
+  return null;
+}
+
+// 3. Add to your layout
+<TrakletDevWidget />
 ```
+
+**Environment variables** (`.env.local`):
+```bash
+NEXT_PUBLIC_TRAKLET_PAT=your_token_here
+NEXT_PUBLIC_TRAKLET_ENABLED=true
+```
+
+Widget appears. Done.
+
+**Key principle:** No imports from your app. No auth coupling. No API routes. Perfect isolation.
 
 ## Connecting to a Backend
 
@@ -66,59 +131,157 @@ await Traklet.init({
 
 ---
 
-## Framework Integration
+## Anti-Patterns: What NOT to Do
 
-Traklet is fully self-contained. **No proxy routes, no API middleware, no backend code in your app.** Traklet's built-in adapters handle all communication with GitHub, Azure DevOps, or your REST API directly. The only thing your host application provides is the PAT token via an environment variable.
+Traklet is designed for **zero host coupling**. These patterns violate that principle and are explicitly rejected:
 
-### What You Write vs. What Traklet Handles
-
-| Concern | Your app | Traklet |
-|---------|----------|---------|
-| API calls to GitHub/ADO | Nothing | Built-in adapters |
-| Issue CRUD, comments, labels | Nothing | Adapter layer |
-| Widget UI (list, detail, form) | Nothing | Shadow DOM components |
-| CSS isolation | Nothing | Shadow DOM — zero conflicts |
-| Offline queue & sync | Nothing | IndexedDB operation queue |
-| Authentication | Provide a PAT token | Sends it with every API call |
-| User identity | Pass current user to `init()` | Attributes issues to that user |
-
-### Passing the Current User
-
-Traklet needs to know **who** is performing actions so issues and test results are properly attributed. Pass the logged-in user's identity from your app's existing auth system:
+### ❌ DON'T: Import from your host app
 
 ```typescript
-await Traklet.init({
-  adapter: 'github',
-  token: process.env.NEXT_PUBLIC_GITHUB_TOKEN,
-  projects: [{ id: 'my-repo', name: 'My Repo', identifier: 'owner/repo' }],
-  user: {
-    email: currentUser.email,       // Required — used for attribution
-    name: currentUser.displayName,  // Optional — shown in the widget
-    id: currentUser.id,             // Optional — unique identifier
-  },
+// WRONG — Creates tight coupling
+import { useAuth } from '@/lib/auth';
+import { theme } from '@/config/theme';
+import { apiClient } from '@/services/api';
+
+const { user } = useAuth();
+Traklet.init({ user: { email: user.email } });
+```
+
+**Why:** Breaks when you change auth, requires different code per framework.
+
+**RIGHT:** Use `.traklet/settings.json` for user identity. Traklet manages its own state.
+
+### ❌ DON'T: Read from host auth systems
+
+```typescript
+// WRONG — Couples to host's auth implementation
+const jwt = localStorage.getItem('auth_token');
+const decoded = JSON.parse(atob(jwt.split('.')[1]));
+Traklet.init({ user: { email: decoded.email } });
+```
+
+**Why:** QA testers may not be app users. Auth changes break Traklet.
+
+**RIGHT:** Let users set identity via widget settings gear, stored in `.traklet/settings.json`.
+
+### ❌ DON'T: Create API proxy routes
+
+```typescript
+// WRONG — Defeats the purpose of built-in adapters
+// app/api/traklet/route.ts
+export async function POST(req: Request) {
+  const token = req.headers.get('authorization');
+  const res = await fetch('https://api.github.com/...', {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.json();
+}
+```
+
+**Why:** Traklet's adapters already do this. You're duplicating work.
+
+**RIGHT:** Pass `token` to `Traklet.init()`. The adapter handles all API calls.
+
+### ❌ DON'T: Hardcode tokens
+
+```typescript
+// WRONG — Security vulnerability
+Traklet.init({
+  token: 'ghp_abc123...'  // DO NOT DO THIS
 });
 ```
 
-If `user` is omitted, the widget settings gear allows each user to self-identify (name + email stored in browser localStorage). But for proper tracking, always pass the user from your auth system.
+**Why:** Tokens leak into version control, build artifacts, browser DevTools.
 
-**Common patterns for reading the current user:**
+**RIGHT:** Use environment variables or `.traklet/settings.json`.
 
-```typescript
-// JWT in localStorage (decode payload without verification)
-const jwt = JSON.parse(atob(localStorage.getItem('auth_token')!.split('.')[1]));
-user: { email: jwt.email, id: jwt.sub }
+### ❌ DON'T: Add dependencies to host package.json
 
-// React context
-const { user } = useAuth();
-user: { email: user.email, name: user.name }
-
-// Cookie-based session
-const res = await fetch('/api/me');
-const me = await res.json();
-user: { email: me.email, name: me.name, id: me.id }
+```json
+// WRONG — Pollutes host dependencies
+{
+  "dependencies": {
+    "octokit": "^3.0.0",
+    "azure-devops-node-api": "^12.0.0"
+  }
+}
 ```
 
+**Why:** These are Traklet's internal dependencies, not yours.
+
+**RIGHT:** Only install `traklet`. It bundles everything it needs.
+
+### ✅ DO: Follow the canonical pattern
+
+```tsx
+// RIGHT — Complete isolation
+export function TrakletDevWidget() {
+  useEffect(() => {
+    const token = process.env.NEXT_PUBLIC_TRAKLET_PAT;
+    if (!token) return;
+
+    (async () => {
+      const { Traklet } = await import('traklet');
+      await Traklet.init({ adapter: 'github', token });
+    })();
+  }, []);
+  return null;
+}
+```
+
+One component. No host imports. No auth coupling. Perfect.
+
+---
+
+## Framework Integration
+
+Traklet is fully self-contained. **No proxy routes, no API middleware, no backend code in your app.** Traklet's built-in adapters handle all communication with GitHub, Azure DevOps, or your REST API directly.
+
+### The Minimal Footprint Promise
+
+Integration = **1 component file + 1 line in layout + 2 env vars**. Nothing else.
+
+To remove Traklet: delete the component, delete the layout line, delete the env vars. Done.
+
+### What You Write vs. What Traklet Handles
+
+| Concern | Your app provides | Traklet handles |
+|---------|-------------------|-----------------|
+| API calls to GitHub/ADO | **Nothing** | Built-in adapters |
+| Issue CRUD, comments, labels | **Nothing** | Adapter layer |
+| Widget UI (list, detail, form) | **Nothing** | Shadow DOM components |
+| CSS isolation | **Nothing** | Shadow DOM — zero conflicts |
+| Offline queue & sync | **Nothing** | IndexedDB operation queue |
+| Authentication | PAT token via env var | Sends it with every API call |
+| User identity | **Nothing** | `.traklet/settings.json` (per-tester, gitignored) |
+
+### User Identity: Zero Host Coupling
+
+Traklet **never reads from your app's auth system**. User identity comes from `.traklet/settings.json`:
+
+```json
+// .traklet/settings.json (gitignored — each tester creates their own)
+{
+  "user": { "email": "tester@company.com", "name": "Jane Doe" },
+  "token": "paste-your-pat-here",
+  "adapter": "azure-devops",
+  "baseUrl": "https://dev.azure.com/org",
+  "project": "my-project"
+}
+```
+
+**Why not read from the host's auth?**
+1. Couples Traklet to your auth system (NextAuth, Clerk, Auth0, etc.)
+2. Different integration code per host framework
+3. Breaks when you change auth providers
+4. QA testers may not be app users
+5. `.traklet/settings.json` works identically everywhere — true drop-in
+
+Users set their identity once via the widget settings gear (stored in localStorage + `.traklet/settings.json`). This file is gitignored and never committed.
+
 ### Next.js (App Router)
+
+**Total footprint: 1 component + 1 line in layout + 2 env vars**
 
 **1. Install**
 
@@ -139,47 +302,39 @@ config.resolve.symlinks = false;
 **2. Add environment variables** to `.env.local` (gitignored):
 
 ```bash
-NEXT_PUBLIC_TRAKLET_GITHUB_TOKEN=ghp_your_pat_here
-NEXT_PUBLIC_TRAKLET_GITHUB_REPO=owner/repo
+NEXT_PUBLIC_TRAKLET_PAT=your_pat_token_here
+NEXT_PUBLIC_TRAKLET_ENABLED=true  # Dev-only guard
 ```
 
-**3. Create a single component** — this is the only file you add:
+**3. Create ONE component** — the ONLY file you add:
 
 ```tsx
-// src/components/TrakletWidget.tsx
+// src/components/TrakletDevWidget.tsx
 'use client';
 
 import { useEffect, useRef } from 'react';
 
-// Decode JWT payload to get the logged-in user (no verification needed client-side)
-function decodeJwt(token: string | null) {
-  if (!token) return null;
-  try { return JSON.parse(atob(token.split('.')[1])); } catch { return null; }
-}
-
-export function TrakletWidget() {
+export function TrakletDevWidget() {
   const instanceRef = useRef<{ destroy: () => void } | null>(null);
   const initRef = useRef(false);
 
   useEffect(() => {
-    const token = process.env.NEXT_PUBLIC_TRAKLET_GITHUB_TOKEN;
-    const repo = process.env.NEXT_PUBLIC_TRAKLET_GITHUB_REPO;
-    if (!token || !repo || initRef.current) return;
+    const token = process.env.NEXT_PUBLIC_TRAKLET_PAT;
+    if (!token || process.env.NEXT_PUBLIC_TRAKLET_ENABLED !== 'true' || initRef.current) {
+      return;
+    }
     initRef.current = true;
 
     (async () => {
       const { Traklet } = await import('traklet');
-
-      // Read current user from your app's auth token
-      const jwt = decodeJwt(localStorage.getItem('auth_token'));
-
       instanceRef.current = await Traklet.init({
-        adapter: 'github',
+        adapter: 'azure-devops',  // or 'github', 'localStorage'
         token,
-        projects: [{ id: 'my-project', name: 'My Project', identifier: repo }],
-        user: jwt ? { email: jwt.email, id: jwt.sub } : undefined,
+        baseUrl: process.env.NEXT_PUBLIC_TRAKLET_BASE_URL || 'https://dev.azure.com/org',
+        projects: [{ id: 'my-project', name: 'My Project' }],
+        position: 'bottom-right',
       });
-    })().catch(console.error);
+    })().catch((err) => console.warn('[Traklet] Failed to load:', err));
 
     return () => {
       instanceRef.current?.destroy();
@@ -196,41 +351,58 @@ export function TrakletWidget() {
 
 ```tsx
 // src/app/layout.tsx
-import { TrakletWidget } from '@/components/TrakletWidget';
+import { TrakletDevWidget } from '@/components/TrakletDevWidget';
 
 // Inside <body>:
-<TrakletWidget />
+<TrakletDevWidget />
 ```
 
-That's it. No API routes. No proxy. No data mapping.
+**That's it.** No imports from your app. No API routes. No proxy. No auth coupling.
+
+**To remove Traklet:**
+1. Delete `TrakletDevWidget.tsx`
+2. Delete `<TrakletDevWidget />` from layout
+3. Delete env vars from `.env.local`
+
+Three deletions. Zero other changes needed.
 
 ### React (Vite / CRA)
+
+**Total footprint: 1 component + 1 useEffect + 2 env vars**
 
 ```tsx
 // App.tsx or index.tsx
 import { useEffect } from 'react';
-import { useAuth } from './hooks/useAuth'; // your app's auth hook
 
 function App() {
-  const { user } = useAuth();
-
   useEffect(() => {
+    const token = import.meta.env.VITE_TRAKLET_PAT;
+    if (!token || import.meta.env.VITE_TRAKLET_ENABLED !== 'true') return;
+
     let instance: { destroy: () => void } | null = null;
     (async () => {
       const { Traklet } = await import('traklet');
       instance = await Traklet.init({
         adapter: 'github',
-        token: import.meta.env.VITE_GITHUB_TOKEN,
+        token,
         projects: [{ id: 'my-repo', name: 'My Repo', identifier: 'owner/repo' }],
-        user: user ? { email: user.email, name: user.name } : undefined,
       });
     })();
     return () => { instance?.destroy(); };
-  }, [user]);
+  }, []);
 
   return <div>{/* your app */}</div>;
 }
 ```
+
+**Environment variables** (`.env.local`):
+
+```bash
+VITE_TRAKLET_PAT=your_pat_token_here
+VITE_TRAKLET_ENABLED=true
+```
+
+No imports from your app. No auth coupling. No host dependencies.
 
 ### Vanilla JavaScript
 
@@ -238,29 +410,48 @@ function App() {
 <script type="module">
   import { Traklet } from './node_modules/traklet/dist/traklet.es.js';
 
-  await Traklet.init({
-    adapter: 'github',
-    token: 'ghp_xxx', // In production, inject via build tool or server-side template
-    projects: [{ id: 'my-repo', name: 'My Repo', identifier: 'owner/repo' }],
-  });
+  // NEVER hardcode tokens — use env vars or build-time injection
+  const token = window.ENV?.TRAKLET_PAT; // Injected server-side
+  
+  if (token) {
+    await Traklet.init({
+      adapter: 'github',
+      token,
+      projects: [{ id: 'my-repo', name: 'My Repo', identifier: 'owner/repo' }],
+    });
+  }
 </script>
 ```
 
+For production, inject `window.ENV` via server-side templating or build tool, never commit tokens to source.
+
 ### Dev-Only Conditional Loading
 
-To show the widget only in development environments, guard the init call:
+Best practice: Only load Traklet in development/staging, never in production.
+
+**Option 1: Environment variable guard (recommended)**
 
 ```typescript
-const isDev = window.location.hostname === 'localhost'
-  || window.location.port === '3000';
-
-if (isDev && token) {
+// The guard + dynamic import() ensures tree-shaking removes Traklet in production
+if (process.env.NEXT_PUBLIC_TRAKLET_ENABLED === 'true') {
   const { Traklet } = await import('traklet');
   await Traklet.init({ /* ... */ });
 }
 ```
 
-The dynamic `import()` ensures Traklet is never bundled in production when the guard prevents execution.
+**Option 2: Hostname check**
+
+```typescript
+const isDev = window.location.hostname === 'localhost'
+  || window.location.hostname.includes('staging');
+
+if (isDev) {
+  const { Traklet } = await import('traklet');
+  await Traklet.init({ /* ... */ });
+}
+```
+
+The dynamic `import()` is critical — it ensures Traklet is never bundled when the guard prevents execution.
 
 ---
 
