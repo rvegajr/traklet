@@ -25,4 +25,4 @@ export * from './builder';
 export { Traklet } from './Traklet';
 
 // Version
-export const VERSION = '0.1.2';
+export const VERSION = '0.1.4';
