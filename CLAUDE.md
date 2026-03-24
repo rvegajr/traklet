@@ -680,6 +680,7 @@ No other files, configs, or dependencies change. If removal requires more than t
 4. REQUIRE user identity via `.traklet/settings.json` only
 5. REQUIRE dev-only guard with dynamic import
 6. VERIFY removal is exactly 3 deletions
+7. REFERENCE: See INTEGRATION.md for canonical integration patterns
 
 ---
 
