@@ -1,6 +1,6 @@
 {
   "name": "traklet",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Drop-in issue tracking and test case management widget for any JavaScript application",
   "type": "module",
   "main": "dist/traklet.umd.js",
