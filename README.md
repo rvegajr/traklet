@@ -4,6 +4,21 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![AI Integration](https://img.shields.io/badge/AI-Integration%20Prompt-9cf.svg)](./AI_INTEGRATION_PROMPT.md)
+
+**🤖 [Use AI to integrate automatically](./AI_INTEGRATION_PROMPT.md)** - Copy prompt → Give to Claude/ChatGPT → Get perfect integration
+
+---
+
+## 📚 Documentation
+
+- **🚀 [Quick Start](#quick-start)** - Get started in 5 minutes
+- **🤖 [AI Integration Prompt](./AI_INTEGRATION_PROMPT.md)** - Let AI do the integration for you
+- **📖 [Complete Integration Guide](./INTEGRATION.md)** - Framework-specific instructions
+- **📋 [Quick Reference Card](./QUICK_REFERENCE.md)** - One-page printable guide
+- **⚡ [One-Pager for Sharing](./AI_INTEGRATION_ONEPAGER.md)** - Share with your team
+
+---
 
 ## Features
 
@@ -98,6 +113,35 @@ Traklet follows a strict **zero-coupling** integration pattern:
 No residual code. No migrations. No cleanup. If it's harder than this, the integration is wrong.
 
 ## Quick Start
+
+### Option 1: AI-Assisted Integration (Recommended)
+
+Copy this prompt and give it to Claude, ChatGPT, or any AI assistant:
+
+```
+Integrate Traklet into my [Next.js/React/Vue] project.
+
+Requirements:
+- Zero host coupling (no imports from my app)
+- Zero auth coupling (don't read my auth system)
+- Only 1 component + 1 line in layout + 2 env vars
+- Token from environment variables only
+- Dev-only loading (not in production)
+
+Framework: [Your framework]
+Backend: [azure-devops / github / localStorage]
+Backend config: [your org/repo]
+
+Follow the canonical pattern from: https://github.com/rvegajr/traklet/blob/main/AI_INTEGRATION_PROMPT.md
+```
+
+The AI will generate perfect, copy-paste ready code following best practices.
+
+**Full AI prompt with examples:** [AI_INTEGRATION_PROMPT.md](./AI_INTEGRATION_PROMPT.md)
+
+---
+
+### Option 2: Manual Integration
 
 **Zero-coupling integration in 3 steps:**
 
