@@ -202,6 +202,173 @@ program
   });
 
 // ============================================
+// traklet generate
+// ============================================
+
+interface TestCaseInput {
+  id: string;
+  title: string;
+  suite: string;
+  objective: string;
+  steps: string[];
+  expectedResult: string;
+  priority?: string;
+  labels?: string[];
+  depends?: string[];
+  prerequisites?: string[];
+  assignee?: string;
+}
+
+program
+  .command('generate')
+  .description('Generate test case markdown files from JSON input')
+  .option('--from <file>', 'JSON file with test case definitions')
+  .option('--stdin', 'Read JSON from stdin', false)
+  .option('-d, --dir <path>', 'Project root directory', process.cwd())
+  .option('--overwrite', 'Overwrite existing files', false)
+  .action(async (opts: { from?: string; stdin: boolean; dir: string; overwrite: boolean }) => {
+    let jsonInput: string;
+
+    if (opts.stdin) {
+      // Read from stdin
+      const chunks: Buffer[] = [];
+      for await (const chunk of process.stdin) {
+        chunks.push(chunk as Buffer);
+      }
+      jsonInput = Buffer.concat(chunks).toString('utf-8');
+    } else if (opts.from) {
+      const filePath = path.resolve(opts.from);
+      if (!fs.existsSync(filePath)) {
+        console.error(`Error: File not found: ${filePath}`);
+        process.exit(1);
+      }
+      jsonInput = fs.readFileSync(filePath, 'utf-8');
+    } else {
+      console.error('Error: Provide --from <file> or --stdin');
+      process.exit(1);
+      return;
+    }
+
+    let testCases: TestCaseInput[];
+    try {
+      testCases = JSON.parse(jsonInput);
+      if (!Array.isArray(testCases)) {
+        throw new Error('JSON must be an array of test case objects');
+      }
+    } catch (e) {
+      console.error(`Error: Invalid JSON - ${(e as Error).message}`);
+      process.exit(1);
+      return;
+    }
+
+    // Validate
+    const errors: string[] = [];
+    for (const tc of testCases) {
+      if (!tc.id) errors.push(`Missing 'id' in test case: ${JSON.stringify(tc).slice(0, 60)}`);
+      if (!tc.title) errors.push(`${tc.id}: missing 'title'`);
+      if (!tc.suite) errors.push(`${tc.id}: missing 'suite'`);
+      if (!tc.objective) errors.push(`${tc.id}: missing 'objective'`);
+      if (!tc.steps || tc.steps.length === 0) errors.push(`${tc.id}: missing 'steps'`);
+      if (!tc.expectedResult) errors.push(`${tc.id}: missing 'expectedResult'`);
+    }
+
+    if (errors.length > 0) {
+      console.error(`Validation errors:`);
+      for (const e of errors) console.error(`  x ${e}`);
+      process.exit(1);
+    }
+
+    // Generate files
+    const baseDir = path.join(opts.dir, '.traklet', 'test-cases');
+    let created = 0;
+    let skipped = 0;
+
+    for (const tc of testCases) {
+      const suiteDir = path.join(baseDir, tc.suite);
+      const kebab = tc.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const filename = `${tc.id}-${kebab}.md`;
+      const filePath = path.join(suiteDir, filename);
+
+      if (fs.existsSync(filePath) && !opts.overwrite) {
+        console.log(`  skip ${filePath} (exists, use --overwrite to replace)`);
+        skipped++;
+        continue;
+      }
+
+      // Build frontmatter
+      const frontmatter: Record<string, unknown> = {
+        id: tc.id,
+        title: tc.title,
+        priority: tc.priority ?? 'medium',
+        labels: tc.labels ?? [],
+        suite: tc.suite,
+      };
+      if (tc.depends && tc.depends.length > 0) {
+        frontmatter['depends'] = tc.depends;
+      }
+      if (tc.assignee) {
+        frontmatter['assignee'] = tc.assignee;
+      }
+
+      // Build body
+      const prereqs = tc.prerequisites && tc.prerequisites.length > 0
+        ? tc.prerequisites.map((p) => `- ${p}`).join('\n')
+        : '_None._';
+
+      const steps = tc.steps.map((s, i) => `${i + 1}. ${s}`).join('\n');
+
+      const body = [
+        '{traklet:test-case}',
+        '',
+        '{traklet:section:objective}',
+        '## Objective',
+        tc.objective,
+        '{/traklet:section:objective}',
+        '',
+        '{traklet:section:prerequisites}',
+        '## Prerequisites',
+        prereqs,
+        '{/traklet:section:prerequisites}',
+        '',
+        '{traklet:section:steps}',
+        '## Steps',
+        steps,
+        '{/traklet:section:steps}',
+        '',
+        '{traklet:section:expected-result}',
+        '## Expected Result',
+        tc.expectedResult,
+        '{/traklet:section:expected-result}',
+        '',
+        '{traklet:section:actual-result}',
+        '## Actual Result',
+        '_Not yet tested._',
+        '{/traklet:section:actual-result}',
+        '',
+        '{traklet:section:evidence}',
+        '## Evidence',
+        '{/traklet:section:evidence}',
+        '',
+        '{traklet:section:notes}',
+        '## Notes',
+        '{/traklet:section:notes}',
+      ].join('\n');
+
+      // Write file
+      fs.mkdirSync(suiteDir, { recursive: true });
+      const content = matter.stringify(body, frontmatter);
+      fs.writeFileSync(filePath, content, 'utf-8');
+      console.log(`  + ${tc.id}: ${tc.title} -> ${path.relative(opts.dir, filePath)}`);
+      created++;
+    }
+
+    console.log(`\nGenerated ${created} test case(s), skipped ${skipped}.`);
+    if (created > 0) {
+      console.log('Run "npx traklet sync" to push them to your backend.');
+    }
+  });
+
+// ============================================
 // Config Reader
 // ============================================
 
