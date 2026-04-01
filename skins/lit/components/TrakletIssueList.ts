@@ -309,15 +309,16 @@ export class TrakletIssueList extends LitElement {
   declare private viewModel: IssueListViewModel;
 
   @state()
-  private suiteViewModel: TestSuiteListViewModel = {
-    suites: [],
-    isLoading: false,
-    error: null,
-    viewMode: 'flat',
-  };
+  declare private suiteViewModel: TestSuiteListViewModel;
 
   constructor() {
     super();
+    this.suiteViewModel = {
+      suites: [],
+      isLoading: false,
+      error: null,
+      viewMode: 'flat',
+    };
     this.viewModel = {
       issues: [],
       isLoading: false,
