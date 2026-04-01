@@ -6,7 +6,15 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { baseStyles, buttonStyles, formStyles, labelStyles, layoutStyles } from '../styles/base';
-import type { IssueListViewModel, IssueListItemViewModel, IIssueListPresenter } from '../../../src/presenters';
+import type {
+  IssueListViewModel,
+  IssueListItemViewModel,
+  IIssueListPresenter,
+  ITestSuiteListPresenter,
+  TestSuiteListViewModel,
+  SuiteViewModel,
+  TestCaseListItemViewModel,
+} from '../../../src/presenters';
 
 @customElement('traklet-issue-list')
 export class TrakletIssueList extends LitElement {
@@ -171,14 +179,142 @@ export class TrakletIssueList extends LitElement {
         padding: var(--traklet-space-md);
         text-align: center;
       }
+
+      /* View mode toggle */
+      .view-toggle {
+        display: inline-flex;
+        border: 1px solid var(--traklet-border);
+        border-radius: var(--traklet-radius-sm);
+        overflow: hidden;
+      }
+
+      .view-toggle__btn {
+        padding: 2px 8px;
+        font-size: 11px;
+        border: none;
+        background: transparent;
+        color: var(--traklet-text-muted);
+        cursor: pointer;
+      }
+
+      .view-toggle__btn--active {
+        background: var(--traklet-primary);
+        color: white;
+      }
+
+      /* Suite group styles */
+      .suite-group {
+        border-bottom: 1px solid var(--traklet-border-muted);
+      }
+
+      .suite-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px var(--traklet-space-md);
+        cursor: pointer;
+        user-select: none;
+        background: var(--traklet-bg-subtle, rgba(128,128,128,0.05));
+        transition: background var(--traklet-transition-fast);
+      }
+
+      .suite-header:hover {
+        background: var(--traklet-bg-hover);
+      }
+
+      .suite-header__chevron {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
+        transition: transform 0.15s ease;
+        color: var(--traklet-text-muted);
+      }
+
+      .suite-header__chevron--expanded {
+        transform: rotate(90deg);
+      }
+
+      .suite-header__name {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--traklet-text);
+        flex: 1;
+      }
+
+      .suite-header__count {
+        font-size: 11px;
+        color: var(--traklet-text-muted);
+      }
+
+      .suite-header__progress {
+        display: flex;
+        gap: 2px;
+        height: 4px;
+        width: 60px;
+        border-radius: 2px;
+        overflow: hidden;
+        background: var(--traklet-border-muted);
+      }
+
+      .suite-header__progress-bar {
+        height: 100%;
+        transition: width 0.2s ease;
+      }
+
+      .suite-header__progress-bar--passed { background: #22c55e; }
+      .suite-header__progress-bar--failed { background: #dc2626; }
+      .suite-header__progress-bar--blocked { background: #f97316; }
+      .suite-header__progress-bar--not-tested { background: var(--traklet-border-muted); }
+
+      .suite-body {
+        border-top: 1px solid var(--traklet-border-muted);
+      }
+
+      /* Blocked indicator */
+      .issue-item--blocked {
+        opacity: 0.7;
+      }
+
+      .issue-item__blocked-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        font-size: 10px;
+        color: #f97316;
+        font-weight: 600;
+      }
+
+      .issue-item__status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .issue-item__status-dot--passed { background: #22c55e; }
+      .issue-item__status-dot--failed { background: #dc2626; }
+      .issue-item__status-dot--blocked { background: #f97316; }
+      .issue-item__status-dot--not-tested { background: #94a3b8; }
+      .issue-item__status-dot--skipped { background: #a855f7; }
     `,
   ];
 
   @property({ type: Object })
   declare presenter: IIssueListPresenter | undefined;
 
+  @property({ type: Object })
+  declare suitePresenter: ITestSuiteListPresenter | undefined;
+
   @state()
   declare private viewModel: IssueListViewModel;
+
+  @state()
+  private suiteViewModel: TestSuiteListViewModel = {
+    suites: [],
+    isLoading: false,
+    error: null,
+    viewMode: 'flat',
+  };
 
   constructor() {
     super();
@@ -194,6 +330,7 @@ export class TrakletIssueList extends LitElement {
   }
 
   private unsubscribe?: () => void;
+  private unsubscribeSuites?: () => void;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -202,24 +339,34 @@ export class TrakletIssueList extends LitElement {
         this.viewModel = vm;
       });
     }
+    if (this.suitePresenter) {
+      this.unsubscribeSuites = this.suitePresenter.subscribeSuites((vm) => {
+        this.suiteViewModel = vm;
+      });
+    }
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.unsubscribe?.();
+    this.unsubscribeSuites?.();
   }
 
   override render() {
+    const isGrouped = this.suiteViewModel.viewMode === 'grouped' && this.suitePresenter;
+
     return html`
       <div class="issue-list traklet-card" data-testid="traklet-issue-list">
         ${this.renderHeader()}
-        ${this.viewModel.isLoading && this.viewModel.issues.length === 0
-          ? this.renderLoading()
-          : this.viewModel.error
-            ? this.renderError()
-            : this.viewModel.issues.length === 0
-              ? this.renderEmpty()
-              : this.renderItems()}
+        ${isGrouped
+          ? this.renderGroupedView()
+          : this.viewModel.isLoading && this.viewModel.issues.length === 0
+            ? this.renderLoading()
+            : this.viewModel.error
+              ? this.renderError()
+              : this.viewModel.issues.length === 0
+                ? this.renderEmpty()
+                : this.renderItems()}
       </div>
     `;
   }
@@ -279,6 +426,20 @@ export class TrakletIssueList extends LitElement {
               `
             : nothing}
         </div>
+        ${this.suitePresenter
+          ? html`
+              <div class="view-toggle" data-testid="traklet-view-toggle">
+                <button
+                  class="view-toggle__btn ${this.suiteViewModel.viewMode === 'flat' ? 'view-toggle__btn--active' : ''}"
+                  @click=${() => this.suitePresenter?.setViewMode('flat')}
+                >List</button>
+                <button
+                  class="view-toggle__btn ${this.suiteViewModel.viewMode === 'grouped' ? 'view-toggle__btn--active' : ''}"
+                  @click=${() => this.suitePresenter?.setViewMode('grouped')}
+                >Suites</button>
+              </div>
+            `
+          : nothing}
         ${this.viewModel.canCreateIssue
           ? html`
               <button
@@ -350,6 +511,102 @@ export class TrakletIssueList extends LitElement {
         </div>
       </li>
     `;
+  }
+
+  private renderGroupedView() {
+    if (this.suiteViewModel.isLoading && this.suiteViewModel.suites.length === 0) {
+      return this.renderLoading();
+    }
+    if (this.suiteViewModel.error) {
+      return html`
+        <div class="traklet-empty" data-testid="traklet-suite-error">
+          <p>${this.suiteViewModel.error}</p>
+          <button class="traklet-btn traklet-btn--secondary" @click=${() => this.suitePresenter?.loadSuites()}>Retry</button>
+        </div>
+      `;
+    }
+    if (this.suiteViewModel.suites.length === 0) {
+      return html`<div class="traklet-empty"><p>No test suites found. Sync test cases with <code>npx traklet sync</code></p></div>`;
+    }
+    return html`
+      <div data-testid="traklet-suite-list">
+        ${this.suiteViewModel.suites.map((suite) => this.renderSuiteGroup(suite))}
+      </div>
+    `;
+  }
+
+  private renderSuiteGroup(suite: SuiteViewModel) {
+    const total = suite.summary.passed + suite.summary.failed + suite.summary.blocked + suite.summary.notTested;
+    const pPassed = total > 0 ? (suite.summary.passed / total) * 100 : 0;
+    const pFailed = total > 0 ? (suite.summary.failed / total) * 100 : 0;
+    const pBlocked = total > 0 ? (suite.summary.blocked / total) * 100 : 0;
+
+    return html`
+      <div class="suite-group" data-testid="traklet-suite-${suite.suiteId}">
+        <div class="suite-header" @click=${() => this.handleSuiteToggle(suite.suiteId)}>
+          <svg class="suite-header__chevron ${suite.isExpanded ? 'suite-header__chevron--expanded' : ''}" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z"/>
+          </svg>
+          <span class="suite-header__name">${suite.displayName}</span>
+          <span class="suite-header__count">${suite.issueCount}</span>
+          ${total > 0
+            ? html`
+                <div class="suite-header__progress" title="${suite.summary.passed} passed, ${suite.summary.failed} failed, ${suite.summary.blocked} blocked">
+                  ${pPassed > 0 ? html`<div class="suite-header__progress-bar suite-header__progress-bar--passed" style="width:${pPassed}%"></div>` : nothing}
+                  ${pFailed > 0 ? html`<div class="suite-header__progress-bar suite-header__progress-bar--failed" style="width:${pFailed}%"></div>` : nothing}
+                  ${pBlocked > 0 ? html`<div class="suite-header__progress-bar suite-header__progress-bar--blocked" style="width:${pBlocked}%"></div>` : nothing}
+                </div>
+              `
+            : nothing}
+        </div>
+        ${suite.isExpanded
+          ? html`
+              <div class="suite-body">
+                ${suite.isLoading
+                  ? html`<div class="traklet-loading" style="padding:8px"><div class="traklet-spinner"></div></div>`
+                  : html`
+                      <ul class="issue-list__items">
+                        ${suite.issues.map((issue) => this.renderTestCaseItem(issue))}
+                      </ul>
+                    `}
+              </div>
+            `
+          : nothing}
+      </div>
+    `;
+  }
+
+  private renderTestCaseItem(issue: TestCaseListItemViewModel) {
+    return html`
+      <li
+        class="issue-item ${issue.isBlocked ? 'issue-item--blocked' : ''}"
+        data-testid="traklet-issue-item"
+        data-issue-id=${issue.id}
+        @click=${() => this.handleSelect(issue.id)}
+      >
+        <span class="issue-item__status-dot issue-item__status-dot--${issue.testStatus}" title="${issue.testStatus}"></span>
+        <div class="issue-item__content">
+          <div class="issue-item__row">
+            ${issue.testCaseId
+              ? html`<span class="issue-item__number">${issue.testCaseId}</span>`
+              : html`<span class="issue-item__number">#${issue.number}</span>`}
+            ${issue.priority
+              ? html`<span class="issue-item__priority issue-item__priority--${issue.priority}" title="${issue.priority}"></span>`
+              : nothing}
+            <h3 class="issue-item__title">${issue.title}</h3>
+          </div>
+          <div class="issue-item__meta">
+            ${issue.isBlocked
+              ? html`<span class="issue-item__blocked-badge" title="Blocked by: ${issue.blockedBy.join(', ')}">Blocked by ${issue.blockedBy.join(', ')}</span>`
+              : html`<span>${issue.authorName}</span><span>${issue.updatedAt}</span>`}
+          </div>
+        </div>
+      </li>
+    `;
+  }
+
+  private handleSuiteToggle(suiteId: string) {
+    this.suitePresenter?.toggleSuite(suiteId);
   }
 
   private renderLoading() {

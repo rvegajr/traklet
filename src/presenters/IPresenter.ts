@@ -4,6 +4,96 @@
  */
 
 import type { Project, IssueQuery } from '@/models';
+import type { TestStatus } from '@/core/TestRunManager';
+
+// ============================================
+// Test Suite & Dependency View Models
+// ============================================
+
+/**
+ * View model for a test case in a suite-grouped list
+ */
+export interface TestCaseListItemViewModel extends IssueListItemViewModel {
+  readonly testCaseId: string;            // "TC-001" extracted from title
+  readonly testStatus: TestStatus;        // from TestRunManager
+  readonly isBlocked: boolean;            // true if any prerequisite failed
+  readonly blockedBy: readonly string[];  // ["TC-001"] — failed prereq IDs
+  readonly prerequisiteIds: readonly string[]; // all prerequisite TC-IDs
+}
+
+/**
+ * Summary of test execution progress within a suite
+ */
+export interface SuiteSummary {
+  readonly passed: number;
+  readonly failed: number;
+  readonly blocked: number;
+  readonly notTested: number;
+}
+
+/**
+ * View model for a test suite group
+ */
+export interface SuiteViewModel {
+  readonly suiteId: string;          // "auth"
+  readonly displayName: string;      // "Authentication"
+  readonly order: number;            // 0 = first (most foundational)
+  readonly issueCount: number;
+  readonly isExpanded: boolean;
+  readonly isLoading: boolean;
+  readonly summary: SuiteSummary;
+  readonly issues: readonly TestCaseListItemViewModel[];
+}
+
+/**
+ * View model for the suite-grouped test case list
+ */
+export interface TestSuiteListViewModel {
+  readonly suites: readonly SuiteViewModel[];
+  readonly isLoading: boolean;
+  readonly error: string | null;
+  readonly viewMode: 'flat' | 'grouped';
+}
+
+/**
+ * Presenter interface for suite-grouped test case management
+ */
+export interface ITestSuiteListPresenter {
+  /**
+   * Get the current suite view model
+   */
+  getSuiteViewModel(): TestSuiteListViewModel;
+
+  /**
+   * Subscribe to suite view model changes
+   */
+  subscribeSuites(callback: (vm: TestSuiteListViewModel) => void): () => void;
+
+  /**
+   * Load/discover available suites
+   */
+  loadSuites(): Promise<void>;
+
+  /**
+   * Toggle suite expanded/collapsed
+   */
+  toggleSuite(suiteId: string): void;
+
+  /**
+   * Expand and load issues for a suite
+   */
+  expandSuite(suiteId: string): Promise<void>;
+
+  /**
+   * Switch between flat and grouped view modes
+   */
+  setViewMode(mode: 'flat' | 'grouped'): void;
+
+  /**
+   * Set the project context
+   */
+  setProjectId(projectId: string): void;
+}
 
 /**
  * View model for displaying an issue in a list

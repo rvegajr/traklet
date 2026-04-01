@@ -131,3 +131,22 @@ export type {
   TestCaseCreateOptions,
   SectionRole,
 } from './TestCaseTemplate';
+
+// Suite Manager
+export {
+  SuiteManager,
+  getSuiteManager,
+  resetSuiteManager,
+} from './SuiteManager';
+export type { SuiteInfo } from './SuiteManager';
+
+// Dependency Resolver
+export {
+  DependencyResolver,
+  getDependencyResolver,
+  resetDependencyResolver,
+} from './DependencyResolver';
+export type {
+  DependencyInfo,
+  ResolvedPrerequisite,
+} from './DependencyResolver';

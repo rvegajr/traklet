@@ -13,9 +13,15 @@ export type {
   IIssueDetailPresenter,
   IIssueFormPresenter,
   IWidgetPresenter,
+  TestCaseListItemViewModel,
+  SuiteViewModel,
+  SuiteSummary,
+  TestSuiteListViewModel,
+  ITestSuiteListPresenter,
 } from './IPresenter';
 
 // Implementations
 export { IssueListPresenter } from './IssueListPresenter';
 export { IssueDetailPresenter } from './IssueDetailPresenter';
 export { IssueFormPresenter } from './IssueFormPresenter';
+export { TestSuiteListPresenter } from './TestSuiteListPresenter';
