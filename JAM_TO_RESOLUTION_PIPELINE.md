@@ -375,4 +375,46 @@ Example/template pipeline code — workflow YAML, skill scaffolds, the per-stage
 
 ---
 
+## 19. Trigger mechanisms (GitHub Actions = live · Azure DevOps = sketch)
+
+The `jam:*` label vocabulary (§8) is backend-agnostic — Traklet syncs the same names
+to GitHub Issues **or** Azure DevOps work items. But the *runner trigger* is
+platform-specific. Today only the GitHub path is built and live.
+
+### A · GitHub Actions — LIVE
+- Trigger: `on: issues: types: [labeled]`.
+- Gate (job `if`): fires only when the just-added label is `jam:state/queued`, the
+  issue also carries `jam`, and it does **not** carry `jam:control/hold`.
+- The workflow file must live on the **default branch** (GitHub reads `issues`
+  workflows from there) — for BlessBox that is `main`.
+- Label transitions + PR creation use the built-in `GITHUB_TOKEN` (`gh` CLI); the
+  Claude Code GitHub App is required for the action step itself.
+- Human gates = the workflow simply stops at `green-triage` / `ready-for-review` /
+  `needs-human` and waits for a human to add the next label.
+
+### B · Azure DevOps — SKETCH (not built)
+Azure work items use **tags**, not labels, and Azure does **not** run GitHub Actions.
+Two ways to drive the same state machine:
+
+1. **Native Azure Pipelines.** A *Service Hook* on "work item updated" calls an Azure
+   Pipeline (`azure-pipelines.yml`) running the same Claude Code logic. The gate checks
+   the work-item tags (`jam:state/queued` present, no `jam:control/hold`). Tag/PR
+   transitions use the **Azure DevOps REST API** (or `az boards`/`az repos`) instead of
+   `gh`. One self-contained Azure-native pipeline.
+
+2. **Webhook bridge to the existing GitHub runner (recommended for a mixed shop).** An
+   Azure *Service Hook* (work item updated) → a small relay (Azure Function, or an app
+   route `/api/jam/azure-hook`) → GitHub `repository_dispatch` (`event_type: jam.azure`)
+   → reuse the **one** GitHub Actions workflow. Single runner; the relay maps the Azure
+   tag change to a dispatch payload `{ workItemId, jamUrl, tag }`.
+
+### C · Portability note
+Only two things are platform-specific: the **trigger** (above) and the runner's
+**tracker calls** (tag/label transitions, PR + comment creation). To go cross-platform,
+abstract those behind a tiny `tracker` shim with `gh` and `az`/REST implementations; the
+extract → author → RED-gate core is identical. Traklet's own
+`adapter: github | azure-devops` setting already mirrors this split.
+
+---
+
 *Companion docs: [`JAM_TO_PLAYWRIGHT_RECIPE.md`](./JAM_TO_PLAYWRIGHT_RECIPE.md) · [`.traklet/AGENT.md`](./.traklet/AGENT.md) · [`INTEGRATION.md`](./INTEGRATION.md)*
