@@ -18,6 +18,11 @@
 - **📋 [Quick Reference Card](./QUICK_REFERENCE.md)** - One-page printable guide
 - **⚡ [One-Pager for Sharing](./AI_INTEGRATION_ONEPAGER.md)** - Share with your team
 
+### 🔁 Autonomous QA pipeline (Jam.dev + Traklet)
+- **🍫 [Jam → Traklet Pipeline Recipe](./JAM_TRAKLET_PIPELINE_RECIPE.md)** - **Base recipe** — build your own autonomous QA-to-deployment pipeline
+- **🎬 [Jam → Playwright Recipe](./JAM_TO_PLAYWRIGHT_RECIPE.md)** - The manual core (bug recording → Playwright spec)
+- **🛠️ [Jam → Resolution Pipeline](./JAM_TO_RESOLUTION_PIPELINE.md)** - Reference design/runbook + label state machine
+
 ---
 
 ## Features
