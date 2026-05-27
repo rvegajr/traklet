@@ -544,6 +544,70 @@ export class TrakletIssueDetail extends LitElement {
         color: var(--traklet-text);
         background: var(--traklet-bg);
       }
+
+      /* Resolution / pipeline activity section */
+      .resolution {
+        border-top: 1px solid var(--traklet-border-muted);
+        padding: var(--traklet-space-md);
+        background: var(--traklet-bg-secondary);
+      }
+
+      .resolution__title {
+        font-size: var(--traklet-font-size-sm);
+        font-weight: 600;
+        color: var(--traklet-text);
+        margin: 0 0 var(--traklet-space-sm) 0;
+      }
+
+      .resolution__entry {
+        padding: var(--traklet-space-sm) var(--traklet-space-md);
+        border: 1px solid var(--traklet-border-muted);
+        border-radius: var(--traklet-radius-md);
+        margin-bottom: var(--traklet-space-sm);
+        background: var(--traklet-bg);
+      }
+
+      .resolution__entry:last-child {
+        margin-bottom: 0;
+      }
+
+      .resolution__entry-header {
+        display: flex;
+        align-items: center;
+        gap: var(--traklet-space-sm);
+        margin-bottom: var(--traklet-space-xs);
+      }
+
+      .resolution__badge {
+        font-size: 10px;
+        font-weight: 600;
+        background: rgba(9, 105, 218, 0.1);
+        color: var(--traklet-primary);
+        padding: 1px 6px;
+        border-radius: var(--traklet-radius-full);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .resolution__entry-time {
+        font-size: var(--traklet-font-size-xs);
+        color: var(--traklet-text-muted);
+      }
+
+      .resolution__entry-body {
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--traklet-text);
+        overflow-wrap: break-word;
+      }
+
+      .resolution__entry-body p {
+        margin: 0 0 4px 0;
+      }
+
+      .resolution__entry-body p:last-child {
+        margin: 0;
+      }
     `,
   ];
 
@@ -590,6 +654,18 @@ export class TrakletIssueDetail extends LitElement {
   }
 
   private unsubscribe: (() => void) | null = null;
+
+  private get pipelineComments(): CommentViewModel[] {
+    return this.comments.filter(
+      (c) => c.author.name.includes('[bot]') || c.author.name === 'github-actions'
+    );
+  }
+
+  private get humanComments(): CommentViewModel[] {
+    return this.comments.filter(
+      (c) => !c.author.name.includes('[bot]') && c.author.name !== 'github-actions'
+    );
+  }
 
   override connectedCallback() {
     super.connectedCallback();
@@ -655,6 +731,7 @@ export class TrakletIssueDetail extends LitElement {
       ${this.renderHeader()}
       ${this.renderTestStatusBar()}
       ${this.parsedBody?.isTestCase ? this.renderTestCase() : this.renderRegularIssue()}
+      ${this.renderResolutionSection()}
       ${this.renderComments()}
       ${this.showDeleteConfirm ? this.renderDeleteConfirm() : nothing}
       ${this.renderActionsBar()}
@@ -921,6 +998,34 @@ export class TrakletIssueDetail extends LitElement {
   }
 
   // ============================================
+  // Resolution Section
+  // ============================================
+
+  private renderResolutionSection() {
+    const entries = [...this.pipelineComments].reverse();
+    if (entries.length === 0) return nothing;
+
+    return html`
+      <div class="resolution" data-testid="traklet-resolution">
+        <h3 class="resolution__title">Resolution</h3>
+        ${entries.map(
+          (c) => html`
+            <div class="resolution__entry" data-testid="traklet-resolution-entry">
+              <div class="resolution__entry-header">
+                <span class="resolution__badge">pipeline</span>
+                <span class="resolution__entry-time">${c.createdAt}</span>
+              </div>
+              <div class="resolution__entry-body">
+                ${unsafeHTML(renderMarkdown(c.body))}
+              </div>
+            </div>
+          `
+        )}
+      </div>
+    `;
+  }
+
+  // ============================================
   // Actions Bar
   // ============================================
 
@@ -1089,9 +1194,9 @@ export class TrakletIssueDetail extends LitElement {
 
     return html`
       <div class="comments" data-testid="traklet-comments">
-        <h3 class="comments__title">Comments (${this.comments.length})</h3>
+        <h3 class="comments__title">Comments (${this.humanComments.length})</h3>
 
-        ${this.comments.map((comment) =>
+        ${this.humanComments.map((comment) =>
           this.editingCommentId === comment.id
             ? this.renderCommentEditor(comment)
             : this.renderComment(comment)

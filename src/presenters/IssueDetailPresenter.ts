@@ -248,12 +248,7 @@ export class IssueDetailPresenter implements IIssueDetailPresenter {
     if (!this.currentIssue) return;
 
     const currentLabels = this.currentIssue.labels.map((l) => l.name);
-    const newLabels = [
-      ...new Set([
-        ...currentLabels.filter((n) => n !== 'jam:state/queued'),
-        'in-progress',
-      ]),
-    ];
+    const newLabels = [...new Set([...currentLabels, 'jam:control/approve-fix'])];
 
     const updated = await this.adapter.updateIssue(
       this.currentProjectId,
@@ -346,8 +341,14 @@ export class IssueDetailPresenter implements IIssueDetailPresenter {
       canAddComment: permissionManager.canAddComment(),
       canStartWork:
         issue.state === 'open' &&
-        issue.labels.some((l) => l.name === 'bug' || l.name.startsWith('jam:') || l.name === 'jam') &&
-        !issue.labels.some((l) => l.name === 'in-progress'),
+        issue.labels.some((l) => l.name === 'jam:state/red') &&
+        !issue.labels.some((l) =>
+          l.name === 'jam:control/approve-fix' ||
+          l.name === 'jam:state/fixing' ||
+          l.name === 'jam:state/ready-for-review' ||
+          l.name === 'jam:state/solved' ||
+          l.name === 'jam:state/needs-human'
+        ),
     };
   }
 

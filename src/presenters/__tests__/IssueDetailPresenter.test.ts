@@ -620,11 +620,11 @@ describe('IssueDetailPresenter', () => {
   });
 
   describe('startWork()', () => {
-    it('should add in-progress label and remove jam:state/queued', async () => {
+    it('should add jam:control/approve-fix label without removing jam:state/red', async () => {
       const issue = await adapter.createIssue(projectId, {
         title: 'Bug',
         body: 'Body',
-        labels: ['jam', 'jam:state/queued'],
+        labels: ['jam:state/red'],
       });
       await presenter.loadIssue(issue.id);
 
@@ -632,9 +632,8 @@ describe('IssueDetailPresenter', () => {
 
       const vm = presenter.getViewModel();
       const labelNames = vm!.labels.map((l) => l.name);
-      expect(labelNames).toContain('in-progress');
-      expect(labelNames).toContain('jam');
-      expect(labelNames).not.toContain('jam:state/queued');
+      expect(labelNames).toContain('jam:control/approve-fix');
+      expect(labelNames).toContain('jam:state/red');
     });
 
     it('should emit issue:updated event', async () => {
@@ -663,7 +662,7 @@ describe('IssueDetailPresenter', () => {
       const issue = await adapter.createIssue(projectId, {
         title: 'Bug',
         body: 'Body',
-        labels: ['jam'],
+        labels: ['jam:state/red'],
       });
       await presenter.loadIssue(issue.id);
 
@@ -685,7 +684,7 @@ describe('IssueDetailPresenter', () => {
       const issue = await adapter.createIssue(projectId, {
         title: 'Bug',
         body: 'Body',
-        labels: ['bug'],
+        labels: ['jam:state/red'],
       });
       await presenter.loadIssue(issue.id);
 
@@ -696,7 +695,7 @@ describe('IssueDetailPresenter', () => {
       const issue = await adapter.createIssue(projectId, {
         title: 'Bug',
         body: 'Body',
-        labels: ['jam', 'in-progress'],
+        labels: ['jam:state/red', 'jam:control/approve-fix'],
       });
       await presenter.loadIssue(issue.id);
 
