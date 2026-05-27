@@ -16,6 +16,29 @@ import type {
   TestCaseListItemViewModel,
 } from '../../../src/presenters';
 
+const PIPELINE_STATES: Record<string, { short: string; color: string; bg: string; pulse?: boolean }> = {
+  'queued':           { short: 'queued',    color: '#1D76DB', bg: 'rgba(29,118,219,0.12)' },
+  'extracting':       { short: 'reading',   color: '#1D76DB', bg: 'rgba(29,118,219,0.12)', pulse: true },
+  'authoring':        { short: 'authoring', color: '#1D76DB', bg: 'rgba(29,118,219,0.12)', pulse: true },
+  'red':              { short: 'bug',       color: '#B60205', bg: 'rgba(182,2,5,0.10)' },
+  'green-triage':     { short: 'triage',    color: '#0E8A16', bg: 'rgba(14,138,22,0.10)' },
+  'spec-broken':      { short: 'broken',    color: '#D93F0B', bg: 'rgba(217,63,11,0.10)' },
+  'fixing':           { short: 'fixing',    color: '#1D76DB', bg: 'rgba(29,118,219,0.12)', pulse: true },
+  'verifying':        { short: 'verifying', color: '#1D76DB', bg: 'rgba(29,118,219,0.12)', pulse: true },
+  'ready-for-review': { short: 'review',    color: '#6E4A00', bg: 'rgba(251,202,4,0.30)' },
+  'needs-human':      { short: 'escalated', color: '#D93F0B', bg: 'rgba(217,63,11,0.10)' },
+  'solved':           { short: 'solved',    color: '#0E8A16', bg: 'rgba(14,138,22,0.10)' },
+  'wont-fix':         { short: "won't fix", color: '#6e7781', bg: 'rgba(110,119,129,0.12)' },
+};
+
+function extractPipelineState(labels: readonly { name: string }[]) {
+  const match = labels.find((l) => l.name.startsWith('jam:state/'));
+  if (!match) return null;
+  const key = match.name.replace('jam:state/', '');
+  const cfg = PIPELINE_STATES[key];
+  return cfg ? { key, ...cfg } : null;
+}
+
 @customElement('traklet-issue-list')
 export class TrakletIssueList extends LitElement {
   static override styles = [
@@ -162,6 +185,38 @@ export class TrakletIssueList extends LitElement {
         display: inline-flex;
         align-items: center;
         gap: 2px;
+      }
+
+      /* Pipeline state badge */
+      .pipeline-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 1px 6px;
+        border-radius: var(--traklet-radius-full);
+        white-space: nowrap;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        flex-shrink: 0;
+        align-self: center;
+      }
+
+      .pipeline-badge__dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .pipeline-badge--pulse .pipeline-badge__dot {
+        animation: pipeline-pulse 1.4s ease-in-out infinite;
+      }
+
+      @keyframes pipeline-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50%       { opacity: 0.4; transform: scale(0.75); }
       }
 
       .filter-btn {
@@ -456,6 +511,22 @@ export class TrakletIssueList extends LitElement {
     `;
   }
 
+  private renderPipelineBadge(labels: readonly { name: string; color: string }[]) {
+    const state = extractPipelineState(labels);
+    if (!state) return nothing;
+    return html`
+      <span
+        class="pipeline-badge ${state.pulse ? 'pipeline-badge--pulse' : ''}"
+        style="background:${state.bg}; color:${state.color};"
+        title="Pipeline: ${state.key}"
+        data-testid="traklet-pipeline-badge"
+      >
+        <span class="pipeline-badge__dot" style="background:${state.color};"></span>
+        ${state.short}
+      </span>
+    `;
+  }
+
   private renderItems() {
     return html`
       <ul class="issue-list__items">
@@ -492,6 +563,7 @@ export class TrakletIssueList extends LitElement {
         <div class="issue-item__content">
           <div class="issue-item__row">
             <span class="issue-item__number">#${issue.number}</span>
+            ${this.renderPipelineBadge(issue.labels)}
             ${issue.priority
               ? html`<span class="issue-item__priority issue-item__priority--${issue.priority}" title="${issue.priority}"></span>`
               : nothing}
