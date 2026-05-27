@@ -563,6 +563,7 @@ export class TrakletIssueDetail extends LitElement {
   @state() declare private editingSectionContent: string;
   @state() declare private jamUrlInput: string;
   @state() declare private isSaving: boolean;
+  @state() declare private isStartingWork: boolean;
   @state() declare private showDeleteConfirm: boolean;
   @state() declare private commentInput: string;
   @state() declare private editingCommentId: string | null;
@@ -581,6 +582,7 @@ export class TrakletIssueDetail extends LitElement {
     this.editingSectionContent = '';
     this.jamUrlInput = '';
     this.isSaving = false;
+    this.isStartingWork = false;
     this.showDeleteConfirm = false;
     this.commentInput = '';
     this.editingCommentId = null;
@@ -974,6 +976,19 @@ export class TrakletIssueDetail extends LitElement {
 
         <div class="actions-bar__spacer"></div>
 
+        ${vm.canStartWork
+          ? html`
+              <button
+                class="traklet-btn traklet-btn--primary traklet-btn--sm"
+                data-testid="traklet-btn-start-work"
+                ?disabled=${this.isStartingWork}
+                @click=${this.handleStartWork}
+              >
+                ${this.isStartingWork ? 'Starting...' : 'Start Work'}
+              </button>
+            `
+          : nothing}
+
         ${this.parsedBody?.isTestCase
           ? html`
               <button
@@ -1289,6 +1304,17 @@ export class TrakletIssueDetail extends LitElement {
       await this.presenter.updateIssueInline({ body });
     } finally {
       this.isSaving = false;
+    }
+  }
+
+  private async handleStartWork() {
+    this.isStartingWork = true;
+    try {
+      await this.presenter?.startWork();
+    } catch (e) {
+      this.error = e instanceof Error ? e.message : 'Failed to start work';
+    } finally {
+      this.isStartingWork = false;
     }
   }
 

@@ -619,6 +619,102 @@ describe('IssueDetailPresenter', () => {
     });
   });
 
+  describe('startWork()', () => {
+    it('should add in-progress label and remove jam:state/queued', async () => {
+      const issue = await adapter.createIssue(projectId, {
+        title: 'Bug',
+        body: 'Body',
+        labels: ['jam', 'jam:state/queued'],
+      });
+      await presenter.loadIssue(issue.id);
+
+      await presenter.startWork();
+
+      const vm = presenter.getViewModel();
+      const labelNames = vm!.labels.map((l) => l.name);
+      expect(labelNames).toContain('in-progress');
+      expect(labelNames).toContain('jam');
+      expect(labelNames).not.toContain('jam:state/queued');
+    });
+
+    it('should emit issue:updated event', async () => {
+      const events: unknown[] = [];
+      getEventBus().on('issue:updated', (payload) => events.push(payload));
+
+      const issue = await adapter.createIssue(projectId, {
+        title: 'Bug',
+        body: 'Body',
+        labels: ['jam'],
+      });
+      await presenter.loadIssue(issue.id);
+
+      await presenter.startWork();
+
+      expect(events).toHaveLength(1);
+    });
+
+    it('should do nothing when no issue is loaded', async () => {
+      await expect(presenter.startWork()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('canStartWork flag', () => {
+    it('should be true for open issue with jam label', async () => {
+      const issue = await adapter.createIssue(projectId, {
+        title: 'Bug',
+        body: 'Body',
+        labels: ['jam'],
+      });
+      await presenter.loadIssue(issue.id);
+
+      expect(presenter.getViewModel()!.canStartWork).toBe(true);
+    });
+
+    it('should be true for open issue with jam:state/* label', async () => {
+      const issue = await adapter.createIssue(projectId, {
+        title: 'Bug',
+        body: 'Body',
+        labels: ['jam:state/red'],
+      });
+      await presenter.loadIssue(issue.id);
+
+      expect(presenter.getViewModel()!.canStartWork).toBe(true);
+    });
+
+    it('should be true for open issue with bug label', async () => {
+      const issue = await adapter.createIssue(projectId, {
+        title: 'Bug',
+        body: 'Body',
+        labels: ['bug'],
+      });
+      await presenter.loadIssue(issue.id);
+
+      expect(presenter.getViewModel()!.canStartWork).toBe(true);
+    });
+
+    it('should be false when already in-progress', async () => {
+      const issue = await adapter.createIssue(projectId, {
+        title: 'Bug',
+        body: 'Body',
+        labels: ['jam', 'in-progress'],
+      });
+      await presenter.loadIssue(issue.id);
+
+      expect(presenter.getViewModel()!.canStartWork).toBe(false);
+    });
+
+    it('should be false for issue without jam or bug label', async () => {
+      const issue = await adapter.createIssue(projectId, {
+        title: 'Feature',
+        body: 'Body',
+        labels: ['enhancement'],
+      });
+      await presenter.loadIssue(issue.id);
+
+      expect(presenter.getViewModel()!.canStartWork).toBe(false);
+    });
+  });
+
   describe('setProjectId()', () => {
     it('should reset viewModel, comments, and currentIssue', async () => {
       const issue = await adapter.createIssue(projectId, {

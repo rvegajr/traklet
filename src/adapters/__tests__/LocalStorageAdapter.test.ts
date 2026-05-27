@@ -424,15 +424,16 @@ describe('LocalStorageAdapter - Specific Features', () => {
       }
     });
 
-    it('should resolve known labels and skip unknown labels in createIssue', async () => {
+    it('should resolve known labels and auto-create unknown labels in createIssue', async () => {
       const issue = await adapter.createIssue('project-1', {
         title: 'Label Resolution',
         body: 'Test',
         labels: ['bug', 'nonexistent-label'],
       });
 
-      expect(issue.labels).toHaveLength(1);
-      expect(issue.labels[0]?.name).toBe('bug');
+      expect(issue.labels).toHaveLength(2);
+      expect(issue.labels.map((l) => l.name)).toContain('bug');
+      expect(issue.labels.map((l) => l.name)).toContain('nonexistent-label');
     });
   });
 

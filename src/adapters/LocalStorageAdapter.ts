@@ -439,9 +439,15 @@ export class LocalStorageAdapter
 
   private resolveLabels(projectId: string, labelNames: readonly string[]): Label[] {
     const projectLabels = this.data.labels.get(projectId) ?? [];
-    return labelNames
-      .map((name) => projectLabels.find((l) => l.name === name))
-      .filter((l): l is Label => l !== undefined);
+    return labelNames.map((name) => {
+      const existing = projectLabels.find((l) => l.name === name);
+      if (existing) return existing;
+      // Dynamically create label so callers aren't silently dropped
+      const created: Label = { id: `label-${name}`, name, color: '#6e7781' };
+      projectLabels.push(created);
+      this.data.labels.set(projectId, projectLabels);
+      return created;
+    });
   }
 
   private persistIfEnabled(): void {

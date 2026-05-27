@@ -244,6 +244,32 @@ export class IssueDetailPresenter implements IIssueDetailPresenter {
     getStateManager().setState({ viewState: 'edit' });
   }
 
+  async startWork(): Promise<void> {
+    if (!this.currentIssue) return;
+
+    const currentLabels = this.currentIssue.labels.map((l) => l.name);
+    const newLabels = [
+      ...new Set([
+        ...currentLabels.filter((n) => n !== 'jam:state/queued'),
+        'in-progress',
+      ]),
+    ];
+
+    const updated = await this.adapter.updateIssue(
+      this.currentProjectId,
+      this.currentIssue.id,
+      { labels: newLabels }
+    );
+    this.currentIssue = updated;
+    this.viewModel = this.toDetailViewModel(updated);
+    this.notifySubscribers();
+
+    getEventBus().emit('issue:updated', {
+      issue: updated,
+      changes: { labels: newLabels },
+    });
+  }
+
   async updateIssueInline(updates: { title?: string; body?: string }): Promise<void> {
     if (!this.currentIssue) return;
 
@@ -318,6 +344,10 @@ export class IssueDetailPresenter implements IIssueDetailPresenter {
       canEdit: permissionManager.canEditIssue(issue),
       canDelete: permissionManager.canDeleteIssue(issue),
       canAddComment: permissionManager.canAddComment(),
+      canStartWork:
+        issue.state === 'open' &&
+        issue.labels.some((l) => l.name === 'bug' || l.name.startsWith('jam:') || l.name === 'jam') &&
+        !issue.labels.some((l) => l.name === 'in-progress'),
     };
   }
 

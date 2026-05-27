@@ -153,6 +153,7 @@ export interface IssueDetailViewModel {
   readonly canEdit: boolean;
   readonly canDelete: boolean;
   readonly canAddComment: boolean;
+  readonly canStartWork: boolean;
 }
 
 /**
@@ -329,6 +330,11 @@ export interface IIssueDetailPresenter {
    * Inline update of issue fields (for section editing in detail view)
    */
   updateIssueInline(updates: { title?: string; body?: string }): Promise<void>;
+
+  /**
+   * Mark this issue as in-progress (adds "in-progress" label, removes jam:state/queued)
+   */
+  startWork(): Promise<void>;
 
   /**
    * Go back to list
