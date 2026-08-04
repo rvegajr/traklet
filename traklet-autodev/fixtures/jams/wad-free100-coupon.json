@@ -1,0 +1,41 @@
+{
+  "id": "jam-wad-free100-001",
+  "url": "https://jam.dev/c/jam-wad-free100-001",
+  "title": "FREE100 coupon completes a $0 order with no card and grants Enterprise",
+  "author": "aracela@demo.dev",
+  "createdAt": "2026-06-09T16:20:00.000Z",
+  "route": "/checkout",
+  "suite": "checkout",
+  "category": "works-as-designed",
+  "specOutcome": "pass",
+  "expectedBehavior": "A 100%-off coupon legitimately produces a $0 order, which skips card capture and grants the plan. This is the intended, already-tested path; abuse is bounded by the once-per-org guard. Not a bug.",
+  "metadata": {
+    "browser": "Chrome 141",
+    "viewport": "1440x900",
+    "env": "demo-local",
+    "plan": "Free -> Enterprise"
+  },
+  "userEvents": [
+    { "t": 0, "type": "navigate", "target": "/checkout", "detail": "Cart subtotal $99.00 (Enterprise)" },
+    { "t": 900, "type": "input", "target": "[data-testid=\"coupon-input\"]", "detail": "FREE100" },
+    { "t": 1400, "type": "click", "target": "[data-testid=\"coupon-apply\"]", "detail": "Apply -> total $0.00" },
+    { "t": 2100, "type": "click", "target": "[data-testid=\"checkout-submit\"]", "detail": "Submit checkout (no card field shown)" },
+    { "t": 2900, "type": "navigate", "target": "/dashboard", "detail": "Redirected, plan = Enterprise" }
+  ],
+  "networkRequests": [
+    { "t": 1600, "method": "POST", "url": "/api/coupon/apply", "status": 200 },
+    { "t": 2300, "method": "POST", "url": "/api/payment/process", "status": 200, "responseBody": "{\"charged\":0,\"plan\":\"enterprise\"}" },
+    { "t": 2500, "method": "POST", "url": "/api/checkout", "status": 200 }
+  ],
+  "consoleLogs": [],
+  "assertion": {
+    "testid": "plan-badge",
+    "expect": "enterprise-granted",
+    "description": "After FREE100 + Complete Checkout the plan becomes Enterprise with no card captured."
+  },
+  "expected": {
+    "restsAt": "green-triage",
+    "terminal": "wont-fix",
+    "humanAction": "triage-wad"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "id": "jam-broken-export-001",
+  "url": "https://jam.dev/c/jam-broken-export-001",
+  "title": "Export to CSV button does nothing",
+  "author": "tester@demo.dev",
+  "createdAt": "2026-06-09T18:02:00.000Z",
+  "route": "/reports",
+  "suite": "export",
+  "category": "broken-selectors",
+  "specOutcome": "error",
+  "expectedBehavior": "Clicking Export to CSV downloads a file. The recorded element has no stable data-testid, so the authored selector will not resolve.",
+  "metadata": {
+    "browser": "Chrome 141",
+    "viewport": "1440x900",
+    "env": "demo-local",
+    "plan": "Pro"
+  },
+  "userEvents": [
+    { "t": 0, "type": "navigate", "target": "/reports", "detail": "Reports page" },
+    { "t": 1300, "type": "click", "target": "button.MuiButton-root:nth-child(3)", "detail": "Export to CSV (no data-testid)" }
+  ],
+  "networkRequests": [
+    { "t": 1500, "method": "GET", "url": "/api/reports/export.csv", "status": 200 }
+  ],
+  "consoleLogs": [],
+  "assertion": {
+    "testid": "export-csv",
+    "expect": "download-started",
+    "description": "Export to CSV triggers a download. (Selector unstable — spec will error.)"
+  },
+  "expected": {
+    "restsAt": "needs-human",
+    "terminal": "needs-human",
+    "humanAction": "none"
+  }
+}

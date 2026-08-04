@@ -1,0 +1,2 @@
+# Runtime state for the local tracker (the label state machine store)
+.state/

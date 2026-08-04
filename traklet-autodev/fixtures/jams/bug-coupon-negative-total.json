@@ -1,0 +1,44 @@
+{
+  "id": "jam-bug-coupon-001",
+  "url": "https://jam.dev/c/jam-bug-coupon-001",
+  "title": "Stacking STACK50 twice drives the order total negative",
+  "author": "tester@demo.dev",
+  "createdAt": "2026-06-09T15:04:00.000Z",
+  "route": "/checkout",
+  "suite": "checkout",
+  "category": "bug",
+  "specOutcome": "fail",
+  "expectedBehavior": "Applying coupons must never let the order total drop below $0. A second 50%-off coupon should stack on the discounted subtotal, not the original, and the floor is $0.",
+  "metadata": {
+    "browser": "Chrome 141",
+    "viewport": "1440x900",
+    "env": "demo-local",
+    "plan": "Pro"
+  },
+  "userEvents": [
+    { "t": 0, "type": "navigate", "target": "/checkout", "detail": "Cart subtotal $40.00" },
+    { "t": 1200, "type": "input", "target": "[data-testid=\"coupon-input\"]", "detail": "STACK50" },
+    { "t": 1800, "type": "click", "target": "[data-testid=\"coupon-apply\"]", "detail": "Apply -> total $20.00" },
+    { "t": 2600, "type": "input", "target": "[data-testid=\"coupon-input\"]", "detail": "STACK50" },
+    { "t": 3100, "type": "click", "target": "[data-testid=\"coupon-apply\"]", "detail": "Apply -> total -$20.00 (NEGATIVE)" },
+    { "t": 3900, "type": "click", "target": "[data-testid=\"checkout-submit\"]", "detail": "Submit checkout" }
+  ],
+  "networkRequests": [
+    { "t": 2000, "method": "POST", "url": "/api/coupon/apply", "status": 200 },
+    { "t": 3300, "method": "POST", "url": "/api/coupon/apply", "status": 200 },
+    { "t": 4100, "method": "POST", "url": "/api/checkout", "status": 500, "responseBody": "{\"error\":\"order total must be >= 0, got -2000\"}" }
+  ],
+  "consoleLogs": [
+    { "t": 4100, "level": "error", "text": "Checkout failed: order total -$20.00 rejected by server (HTTP 500)" }
+  ],
+  "assertion": {
+    "testid": "checkout-total",
+    "expect": "not-negative",
+    "description": "After applying STACK50 twice, the displayed total must be >= $0 and checkout must succeed."
+  },
+  "expected": {
+    "restsAt": "red",
+    "terminal": "solved",
+    "humanAction": "approve-fix-then-merge"
+  }
+}
