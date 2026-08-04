@@ -1,0 +1,37 @@
+{
+  "id": "jam-falsered-toast-001",
+  "url": "https://jam.dev/c/jam-falsered-toast-001",
+  "title": "Saved-toast 'never appeared' after Save Settings",
+  "author": "tester@demo.dev",
+  "createdAt": "2026-06-09T17:10:00.000Z",
+  "route": "/settings",
+  "suite": "settings",
+  "category": "false-red",
+  "specOutcome": "fail",
+  "expectedBehavior": "After Save Settings, a 'Saved' toast confirms the write. The tester believes it did not show.",
+  "metadata": {
+    "browser": "Chrome 141",
+    "viewport": "1440x900",
+    "env": "demo-local",
+    "plan": "Pro"
+  },
+  "userEvents": [
+    { "t": 0, "type": "navigate", "target": "/settings", "detail": "Settings page" },
+    { "t": 1100, "type": "input", "target": "[data-testid=\"settings-display-name\"]", "detail": "New Name" },
+    { "t": 1700, "type": "click", "target": "[data-testid=\"settings-save\"]", "detail": "Save Settings" }
+  ],
+  "networkRequests": [
+    { "t": 1900, "method": "PUT", "url": "/api/settings", "status": 200, "responseBody": "{\"ok\":true}" }
+  ],
+  "consoleLogs": [],
+  "assertion": {
+    "testid": "toast-saved",
+    "expect": "visible",
+    "description": "A 'Saved' toast appears after Save Settings."
+  },
+  "expected": {
+    "restsAt": "needs-human",
+    "terminal": "needs-human",
+    "humanAction": "none"
+  }
+}
