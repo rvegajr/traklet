@@ -1,5 +1,9 @@
 # Traklet Integration Quick Reference Card
 
+> This card covers the mechanics. For the **required policy** — DEV/UAT-only,
+> **no token on prod**, one tracker + `env:dev`/`env:uat` labels, and token
+> scoping — see **[STANDARD.md](./STANDARD.md)** (authoritative).
+
 ## The Golden Rule
 **Integration = 1 component + 1 line + 2 env vars**  
 **Removal = 3 deletions**

@@ -12,6 +12,7 @@
 
 ## 📚 Documentation
 
+- **⭐ [Integration Standard](./STANDARD.md)** - **The authoritative policy** — DEV/UAT-only, one tracker + `env:*` labels, token security. Start here.
 - **🚀 [Quick Start](#quick-start)** - Get started in 5 minutes
 - **🤖 [AI Integration Prompt](./AI_INTEGRATION_PROMPT.md)** - Let AI do the integration for you
 - **📖 [Complete Integration Guide](./INTEGRATION.md)** - Framework-specific instructions
